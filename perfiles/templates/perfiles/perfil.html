@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block titulo %}Perfil de {{ usuario.nombre }}{% endblock %}
+
+{% block contenido %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body text-center p-4">
+        {% if usuario.avatar %}
+          <img src="{{ usuario.avatar }}" alt="Avatar de {{ usuario.nombre }}"
+               class="rounded-circle mb-3" width="96" height="96" style="object-fit: cover;">
+        {% else %}
+          <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-3"
+               style="width: 96px; height: 96px; font-size: 2rem;">
+            {{ usuario.nombre[0] | upper }}
+          </div>
+        {% endif %}
+
+        <h1 class="h4 mb-1">{{ usuario.nombre }}</h1>
+        <p class="text-muted mb-1">{{ usuario.correo }}</p>
+        {% if usuario.grado %}
+          <span class="badge bg-secondary mb-2">{{ usuario.grado }}</span>
+        {% endif %}
+        {% if usuario.descripcion %}
+          <p class="mt-2">{{ usuario.descripcion }}</p>
+        {% endif %}
+        <p class="text-muted small">Miembro desde {{ usuario.creado_en.strftime("%d/%m/%Y") }}</p>
+
+        {% if usuario.id == current_user.id %}
+          <a class="btn btn-outline-primary" href="{{ url_for('perfiles.editar_perfil') }}">Editar perfil</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

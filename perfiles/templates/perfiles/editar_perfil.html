@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block titulo %}Editar perfil{% endblock %}
+
+{% block contenido %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3">Editar mi perfil</h1>
+        <form method="post" novalidate>
+          {{ formulario.hidden_tag() }}
+
+          <div class="mb-3">
+            {{ formulario.nombre.label(class="form-label") }}
+            {{ formulario.nombre(class="form-control") }}
+            {% for error in formulario.nombre.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3">
+            {{ formulario.grado.label(class="form-label") }}
+            {{ formulario.grado(class="form-control", placeholder="Ej. 2° de preparatoria") }}
+            {% for error in formulario.grado.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3">
+            {{ formulario.descripcion.label(class="form-label") }}
+            {{ formulario.descripcion(class="form-control", rows=3) }}
+            {% for error in formulario.descripcion.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3">
+            {{ formulario.avatar.label(class="form-label") }}
+            {{ formulario.avatar(class="form-control", placeholder="https://...") }}
+            {% for error in formulario.avatar.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+
+          {{ formulario.enviar(class="btn btn-primary") }}
+          <a class="btn btn-outline-secondary" href="{{ url_for('perfiles.ver_perfil', id_usuario=current_user.id) }}">Cancelar</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block titulo %}Registro{% endblock %}
+
+{% block contenido %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3 text-center">Crear cuenta en Vura</h1>
+        <form method="post" novalidate>
+          {{ formulario.hidden_tag() }}
+
+          <div class="mb-3">
+            {{ formulario.nombre.label(class="form-label") }}
+            {{ formulario.nombre(class="form-control") }}
+            {% for error in formulario.nombre.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3">
+            {{ formulario.correo.label(class="form-label") }}
+            {{ formulario.correo(class="form-control") }}
+            {% for error in formulario.correo.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3">
+            {{ formulario.contrasena.label(class="form-label") }}
+            {{ formulario.contrasena(class="form-control") }}
+            {% for error in formulario.contrasena.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3">
+            {{ formulario.confirmar_contrasena.label(class="form-label") }}
+            {{ formulario.confirmar_contrasena(class="form-control") }}
+            {% for error in formulario.confirmar_contrasena.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+
+          {{ formulario.enviar(class="btn btn-primary w-100") }}
+        </form>
+        <p class="text-center small mt-3 mb-0">
+          ¿Ya tienes cuenta? <a href="{{ url_for('autenticacion.iniciar_sesion') }}">Inicia sesión</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

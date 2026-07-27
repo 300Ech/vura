@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block titulo %}Inicio{% endblock %}
+
+{% block contenido %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card shadow-sm">
+      <div class="card-body text-center py-5">
+        <h1 class="card-title">Hola, {{ current_user.nombre }} 👋</h1>
+        <p class="text-muted">Bienvenido a Vura, tu espacio de colaboración escolar.</p>
+        <p class="text-muted">Próximamente: equipos, proyectos, tareas y mucho más.</p>
+        <a class="btn btn-primary" href="{{ url_for('perfiles.ver_perfil', id_usuario=current_user.id) }}">
+          Ver mi perfil
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
