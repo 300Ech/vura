@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from flask_socketio import join_room, leave_room, rooms, emit
 
 from extensiones import db, socketio
-from equipos.models import Equipo
+from equipos.models import Equipo, MiembroEquipo
 from chat.models import Mensaje
 
 chat = Blueprint("chat", __name__, template_folder="templates",
@@ -53,6 +53,19 @@ def unirse_sala(datos):
     join_room(f"equipo_{id_equipo}")
 
 
+@socketio.on("unirse_notificaciones")
+def unirse_notificaciones():
+    """Une al usuario a las salas de todos sus equipos, desde cualquier página.
+
+    Así le llegan los mensajes nuevos y puede ver avisos aunque no esté en el chat.
+    """
+    if not current_user.is_authenticated:
+        return
+    membresias = MiembroEquipo.query.filter_by(id_usuario=current_user.id).all()
+    for membresia in membresias:
+        join_room(f"equipo_{membresia.id_equipo}")
+
+
 @socketio.on("escribiendo")
 def escribiendo(datos):
     id_equipo = datos.get("id_equipo")
@@ -90,6 +103,16 @@ def llamada_unirse(datos):
         "participantes": [{"id": id_conexion, "nombre": nombre}
                           for id_conexion, nombre in presentes.items()],
     })
+
+    # Si es el primero en entrar, se avisa al resto del equipo que empezó una llamada.
+    if len(presentes) == 0:
+        equipo = db.session.get(Equipo, id_equipo)
+        emit("llamada_iniciada", {
+            "nombre": current_user.nombre,
+            "id_equipo": equipo.id,
+            "nombre_equipo": equipo.nombre,
+        }, room=f"equipo_{id_equipo}", include_self=False)
+
     presentes[request.sid] = current_user.nombre
     join_room(sala)
 
@@ -145,9 +168,12 @@ def enviar_mensaje(datos):
     db.session.add(mensaje)
     db.session.commit()
 
+    equipo = db.session.get(Equipo, id_equipo)
     emit("nuevo_mensaje", {
         "nombre": current_user.nombre,
         "id_usuario": current_user.id,
         "texto": mensaje.texto,
         "hora": mensaje.enviado_en.strftime("%H:%M"),
+        "id_equipo": equipo.id,
+        "nombre_equipo": equipo.nombre,
     }, room=f"equipo_{id_equipo}")

@@ -49,6 +49,12 @@
             </a>
             {% if miembro.id_usuario == equipo.id_lider %}
               <span class="badge bg-primary">Líder</span>
+            {% elif current_user.id == equipo.id_lider %}
+              <form method="post" class="m-0"
+                    action="{{ url_for('equipos.expulsar_miembro', id_equipo=equipo.id, id_usuario=miembro.id_usuario) }}"
+                    onsubmit="return confirm('¿Sacar a {{ miembro.usuario.nombre }} del equipo?');">
+                <button class="btn btn-sm btn-outline-danger" type="submit">Sacar</button>
+              </form>
             {% endif %}
           </li>
         {% endfor %}
@@ -57,13 +63,18 @@
   </div>
 
   <div class="col-md-4">
-    <div class="card shadow-sm">
+    <div class="card shadow-sm mb-3">
       <div class="card-body text-center">
         <h2 class="h6">Código de invitación</h2>
         <p class="display-6 mb-1">{{ equipo.codigo_invitacion }}</p>
         <p class="text-muted small mb-0">Compártelo para que tus compañeros se unan.</p>
       </div>
     </div>
+
+    <form method="post" action="{{ url_for('equipos.salir_equipo', id_equipo=equipo.id) }}"
+          onsubmit="return confirm('¿Seguro que quieres salir del equipo?');">
+      <button class="btn btn-outline-danger w-100" type="submit">Salir del equipo</button>
+    </form>
   </div>
 </div>
 {% endblock %}
