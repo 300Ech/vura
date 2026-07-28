@@ -1,1 +1,97 @@
 /* Solo el CSS que Bootstrap no resuelve. */
+
+:root {
+  --color-primario: #6366f1; /* Indigo vibrante */
+  --color-primario-hover: #4f46e5;
+  --color-fondo: #f8fafc; /* Gris azulado muy claro */
+  --radio-borde: 16px;
+  --radio-borde-pequeno: 10px;
+  --sombra-suave: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --sombra-hover: 0 10px 20px rgba(99, 102, 241, 0.15);
+}
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background-color: var(--color-fondo) !important;
+  color: #334155;
+}
+
+/* Redefinición de colores base de Bootstrap para elementos principales */
+.bg-primary {
+  background-color: var(--color-primario) !important;
+}
+
+.btn-primary {
+  background-color: var(--color-primario);
+  border-color: var(--color-primario);
+  border-radius: var(--radio-borde-pequeno);
+  font-weight: 700;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primario-hover);
+  border-color: var(--color-primario-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
+}
+
+.btn {
+  border-radius: var(--radio-borde-pequeno);
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+/* Tarjetas (Cards) */
+.card {
+  border: none;
+  border-radius: var(--radio-borde);
+  box-shadow: var(--sombra-suave);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--sombra-hover);
+}
+
+.card-header {
+  border-radius: var(--radio-borde) var(--radio-borde) 0 0 !important;
+  border-bottom: 1px solid #f1f5f9;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* Navegación */
+.navbar {
+  box-shadow: var(--sombra-suave);
+}
+
+.navbar-brand {
+  font-weight: 800;
+  font-size: 1.5rem;
+  letter-spacing: -0.5px;
+}
+
+/* Elementos de listas / Tareas */
+.border.rounded {
+  border-radius: var(--radio-borde-pequeno) !important;
+  border-color: #e2e8f0 !important;
+  transition: all 0.2s ease;
+}
+
+.border.rounded:hover {
+  border-color: var(--color-primario) !important;
+  background-color: #f8fafc;
+}
+
+/* Badges */
+.badge {
+  border-radius: 8px;
+  padding: 0.4em 0.65em;
+  font-weight: 700;
+}
