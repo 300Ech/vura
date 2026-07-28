@@ -7,6 +7,7 @@ from flask import Blueprint, render_template, request, jsonify, abort, send_from
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
+from chat.routes import notificar_equipo
 from config import RUTA_DATOS
 from extensiones import db
 from proyectos.models import Proyecto
@@ -113,6 +114,19 @@ def guardar_copia(id_proyecto):
         if tarea is None:
             tarea = Tarea(uuid=uuid_tarea, id_proyecto=proyecto.id)
             db.session.add(tarea)
+            notificar_equipo(
+                proyecto.equipo.id,
+                f"🗂️ Tareas de {proyecto.nombre}",
+                f"{current_user.nombre} creó la tarea «{titulo}».",
+                f"/proyectos/{proyecto.id}/tareas",
+            )
+        elif tarea.estado != estado:
+            notificar_equipo(
+                proyecto.equipo.id,
+                f"🗂️ Tareas de {proyecto.nombre}",
+                f"{current_user.nombre} movió «{titulo}» a {TITULOS_ESTADO[estado].lower()}.",
+                f"/proyectos/{proyecto.id}/tareas",
+            )
 
         tarea.titulo = titulo
         tarea.descripcion = descripcion
@@ -186,6 +200,15 @@ def comentar_tarea(id_proyecto, uuid_tarea):
     comentario = ComentarioTarea(uuid_tarea=uuid_tarea[:36], id_autor=current_user.id, texto=texto)
     db.session.add(comentario)
     db.session.commit()
+
+    proyecto = db.session.get(Proyecto, id_proyecto)
+    tarea = Tarea.query.filter_by(uuid=uuid_tarea[:36]).first()
+    notificar_equipo(
+        proyecto.equipo.id,
+        f"💬 Comentario en «{tarea.titulo if tarea else 'una tarea'}»",
+        f"{current_user.nombre}: {texto[:80]}",
+        f"/proyectos/{id_proyecto}/tareas",
+    )
     return jsonify({"autor": current_user.nombre, "texto": comentario.texto,
                     "fecha": comentario.creado_en.strftime("%d/%m %H:%M")})
 
@@ -217,6 +240,15 @@ def subir_archivo(id_proyecto, uuid_tarea):
                             nombre_original=nombre_original, nombre_guardado=nombre_guardado)
     db.session.add(registro)
     db.session.commit()
+
+    proyecto = db.session.get(Proyecto, id_proyecto)
+    tarea = Tarea.query.filter_by(uuid=uuid_tarea[:36]).first()
+    notificar_equipo(
+        proyecto.equipo.id,
+        f"📎 Archivo en «{tarea.titulo if tarea else 'una tarea'}»",
+        f"{current_user.nombre} subió {nombre_original}.",
+        f"/proyectos/{id_proyecto}/tareas",
+    )
     return jsonify({"id": registro.id, "nombre": registro.nombre_original, "autor": current_user.nombre})
 
 

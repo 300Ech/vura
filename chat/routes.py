@@ -1,3 +1,5 @@
+import time
+
 from flask import Blueprint, render_template, abort, request
 from flask_login import login_required, current_user
 from flask_socketio import join_room, leave_room, rooms, emit
@@ -51,6 +53,30 @@ def unirse_sala(datos):
     if not es_miembro_del_equipo(id_equipo):
         return
     join_room(f"equipo_{id_equipo}")
+
+
+# Último aviso enviado por cada clave, para no repetir avisos seguidos (ej. alguien escribiendo notas).
+_ultimo_aviso = {}
+
+
+def notificar_equipo(id_equipo, titulo, texto, enlace, clave_repeticion=None, minutos_espera=0):
+    """Envía una notificación a todos los miembros del equipo conectados.
+
+    Si se da una clave de repetición, el mismo aviso no se repite hasta
+    que pasen los minutos de espera (evita el spam de los guardados automáticos).
+    """
+    if clave_repeticion:
+        ahora = time.time()
+        if ahora - _ultimo_aviso.get(clave_repeticion, 0) < minutos_espera * 60:
+            return
+        _ultimo_aviso[clave_repeticion] = ahora
+
+    socketio.emit("notificacion", {
+        "titulo": titulo,
+        "texto": texto,
+        "enlace": enlace,
+        "id_usuario": current_user.id,
+    }, room=f"equipo_{id_equipo}")
 
 
 @socketio.on("unirse_notificaciones")

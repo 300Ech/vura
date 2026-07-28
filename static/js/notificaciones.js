@@ -32,6 +32,14 @@ socketNotificaciones.on("nuevo_mensaje", (datos) => {
   );
 });
 
+// Aviso genérico: notas, tareas, comentarios, archivos, diapositivas...
+// El servidor manda título, texto y enlace; aquí solo se decide si mostrarlo.
+socketNotificaciones.on("notificacion", (datos) => {
+  if (datos.id_usuario === miId) return; // lo que hago yo no se me notifica
+  if (window.location.pathname === datos.enlace) return; // ya estoy viendo esa página
+  notificar(datos.titulo, datos.texto, datos.enlace);
+});
+
 socketNotificaciones.on("llamada_iniciada", (datos) => {
   notificar(
     `📞 Videollamada en ${datos.nombre_equipo}`,

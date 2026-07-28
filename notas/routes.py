@@ -53,6 +53,18 @@ def guardar_notas(id_proyecto):
     nota.actualizado_por = current_user.id
     db.session.commit()
 
+    # Aviso al equipo, como mucho una vez cada 10 minutos por persona
+    # (las notas se guardan solas cada pocos segundos mientras se escribe).
+    from chat.routes import notificar_equipo
+    notificar_equipo(
+        proyecto.equipo.id,
+        f"📝 Notas de {proyecto.nombre}",
+        f"{current_user.nombre} está editando las notas.",
+        f"/proyectos/{proyecto.id}/notas",
+        clave_repeticion=f"nota_{proyecto.id}_{current_user.id}",
+        minutos_espera=10,
+    )
+
     return jsonify({
         "guardado": True,
         "actualizado_en": nota.actualizado_en.strftime("%H:%M:%S"),

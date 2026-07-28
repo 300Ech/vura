@@ -3,6 +3,7 @@ import json
 from flask import Blueprint, render_template, request, jsonify, abort
 from flask_login import login_required, current_user
 
+from chat.routes import notificar_equipo
 from extensiones import db
 from proyectos.models import Proyecto
 from presentaciones.models import Presentacion, Diapositiva
@@ -66,6 +67,17 @@ def guardar_diapositiva(id_diapositiva):
     diapositiva.actualizado_por = current_user.id
     db.session.commit()
 
+    # Aviso al equipo, como mucho una vez cada 10 minutos por persona
+    # (las diapositivas se guardan solas cada pocos segundos mientras se edita).
+    proyecto = diapositiva.presentacion.proyecto
+    notificar_equipo(
+        proyecto.equipo.id,
+        f"🖼️ Presentación de {proyecto.nombre}",
+        f"{current_user.nombre} está editando la presentación.",
+        f"/proyectos/{proyecto.id}/presentacion",
+        clave_repeticion=f"presentacion_{proyecto.id}_{current_user.id}",
+        minutos_espera=10,
+    )
     return jsonify({"guardado": True, "actualizado_en": diapositiva.actualizado_en.strftime("%H:%M:%S")})
 
 
@@ -80,6 +92,13 @@ def crear_diapositiva(id_presentacion):
     db.session.add(diapositiva)
     db.session.commit()
 
+    proyecto = presentacion.proyecto
+    notificar_equipo(
+        proyecto.equipo.id,
+        f"🖼️ Presentación de {proyecto.nombre}",
+        f"{current_user.nombre} agregó una diapositiva.",
+        f"/proyectos/{proyecto.id}/presentacion",
+    )
     return jsonify({"id": diapositiva.id, "orden": diapositiva.orden})
 
 
