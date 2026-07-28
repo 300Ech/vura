@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block titulo %}Nuevo proyecto{% endblock %}
+
+{% block contenido %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3">Nuevo proyecto para «{{ equipo.nombre }}»</h1>
+        <form method="post" novalidate>
+          {{ formulario.hidden_tag() }}
+
+          <div class="mb-3">
+            {{ formulario.nombre.label(class="form-label") }}
+            {{ formulario.nombre(class="form-control", placeholder="Ej. Feria de ciencias 2026") }}
+            {% for error in formulario.nombre.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3">
+            {{ formulario.descripcion.label(class="form-label") }}
+            {{ formulario.descripcion(class="form-control", rows=3) }}
+            {% for error in formulario.descripcion.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3">
+            {{ formulario.fecha_entrega.label(class="form-label") }}
+            {{ formulario.fecha_entrega(class="form-control", type="date") }}
+            {% for error in formulario.fecha_entrega.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+
+          {{ formulario.enviar(class="btn btn-primary") }}
+          <a class="btn btn-outline-secondary" href="{{ url_for('equipos.ver_equipo', id_equipo=equipo.id) }}">Cancelar</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

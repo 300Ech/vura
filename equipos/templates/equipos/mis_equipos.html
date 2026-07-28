@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block titulo %}Mis equipos{% endblock %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Mis equipos</h1>
+  <a class="btn btn-primary" href="{{ url_for('equipos.crear_equipo') }}">Crear equipo</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-8">
+    {% if membresias %}
+      <div class="list-group shadow-sm">
+        {% for membresia in membresias %}
+          <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+             href="{{ url_for('equipos.ver_equipo', id_equipo=membresia.equipo.id) }}">
+            <div>
+              <strong>{{ membresia.equipo.nombre }}</strong>
+              <div class="text-muted small">{{ membresia.equipo.miembros | length }} miembro(s)</div>
+            </div>
+            {% if membresia.equipo.id_lider == current_user.id %}
+              <span class="badge bg-primary">Líder</span>
+            {% endif %}
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card shadow-sm">
+        <div class="card-body text-center text-muted py-5">
+          Aún no perteneces a ningún equipo.<br>
+          Crea uno o únete con un código de invitación.
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="h6">Unirme a un equipo</h2>
+        <form method="post" action="{{ url_for('equipos.unirse_equipo') }}">
+          {{ formulario_unirse.hidden_tag() }}
+          <div class="mb-2">
+            {{ formulario_unirse.codigo_invitacion(class="form-control", placeholder="VURA-XXXX") }}
+          </div>
+          {{ formulario_unirse.enviar(class="btn btn-outline-primary w-100") }}
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

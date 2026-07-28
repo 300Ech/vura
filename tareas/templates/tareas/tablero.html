@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block titulo %}Tareas de {{ proyecto.nombre }}{% endblock %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 mb-0">Tareas de «{{ proyecto.nombre }}»</h1>
+    <a class="text-muted small" href="{{ url_for('proyectos.ver_proyecto', id_proyecto=proyecto.id) }}">
+      Volver al proyecto
+    </a>
+  </div>
+  <div class="text-end">
+    <span id="estado-guardado" class="text-muted small me-2"></span>
+    <button id="boton-nueva-tarea" class="btn btn-primary" type="button">Nueva tarea</button>
+  </div>
+</div>
+
+<div class="row g-3">
+  {% for estado, lista in columnas.items() %}
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-white text-center">
+          <strong>{{ titulos_estado[estado] }}</strong>
+          <span id="contador-{{ estado }}" class="badge bg-secondary">{{ lista | length }}</span>
+        </div>
+        {# El contenido inicial lo renderiza el servidor; tareas.js lo redibuja desde el documento Yjs. #}
+        <div id="columna-{{ estado }}" class="card-body p-2">
+          {% for tarea in lista %}
+            <div class="card mb-2">
+              <div class="card-body p-2">
+                <strong class="small">{{ tarea.titulo }}</strong>
+                {% if tarea.descripcion %}
+                  <div class="text-muted small">{{ tarea.descripcion }}</div>
+                {% endif %}
+                <div class="d-flex justify-content-between align-items-center mt-1">
+                  <span class="text-muted small">
+                    {% if tarea.asignado %}👤 {{ tarea.asignado.nombre }}{% else %}Sin asignar{% endif %}
+                  </span>
+                  {% if tarea.fecha_limite %}
+                    <span class="badge bg-warning text-dark">{{ tarea.fecha_limite.strftime("%d/%m") }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          {% else %}
+            <p class="text-muted small text-center my-3">Sin tareas</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="modal fade" id="modal-tarea" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="formulario-tarea">
+        <div class="modal-header">
+          <h2 id="titulo-modal" class="h5 mb-0">Nueva tarea</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="uuid">
+          <div class="mb-3">
+            <label class="form-label">Título</label>
+            <input name="titulo" class="form-control" maxlength="120" required
+                   placeholder="Ej. Investigar el tema">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Descripción</label>
+            <textarea name="descripcion" class="form-control" rows="3" maxlength="500"></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Asignada a</label>
+            <select name="id_asignado" class="form-select">
+              <option value="">Sin asignar</option>
+              {% for miembro in proyecto.equipo.miembros %}
+                <option value="{{ miembro.usuario.id }}">{{ miembro.usuario.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Fecha límite</label>
+            <input name="fecha_limite" type="date" class="form-control">
+          </div>
+
+          {# Solo aparece al editar una tarea que ya existe. #}
+          <div id="seccion-detalles" class="d-none">
+            <hr>
+            <h3 class="h6">Comentarios</h3>
+            <div id="lista-comentarios" class="mb-2 small"></div>
+            <div class="input-group input-group-sm mb-3">
+              <input id="texto-comentario" class="form-control" maxlength="300"
+                     placeholder="Escribe un comentario...">
+              <button id="boton-comentar" class="btn btn-outline-primary" type="button">Comentar</button>
+            </div>
+
+            <h3 class="h6">Archivos adjuntos</h3>
+            <div id="lista-archivos" class="mb-2 small"></div>
+            <input id="entrada-archivo" type="file" class="form-control form-control-sm"
+                   accept=".pdf,.png,.jpg,.jpeg,.gif,.docx,.pptx,.xlsx,.txt">
+            <div class="form-text">Máximo 5 MB.</div>
+            <div id="aviso-archivo" class="text-danger small"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar tarea</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script id="datos-tablero" type="application/json">{{ datos_tablero | safe }}</script>
+<script src="https://cdn.jsdelivr.net/npm/socket.io@4.7.5/client-dist/socket.io.min.js"></script>
+<script type="module" src="{{ url_for('tareas.static', filename='tareas.js') }}"></script>
+{% endblock %}

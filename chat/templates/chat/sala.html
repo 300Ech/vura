@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block titulo %}Chat de {{ equipo.nombre }}{% endblock %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Chat de «{{ equipo.nombre }}»</h1>
+  <div>
+    <a class="btn btn-success" href="{{ url_for('chat.llamada', id_equipo=equipo.id) }}">📹 Videollamada</a>
+    <a class="btn btn-outline-secondary" href="{{ url_for('equipos.ver_equipo', id_equipo=equipo.id) }}">
+      Volver al equipo
+    </a>
+  </div>
+</div>
+
+<div id="chat" data-id-equipo="{{ equipo.id }}" data-id-usuario="{{ current_user.id }}"
+     class="card shadow-sm">
+  <div id="lista-mensajes" class="card-body d-flex flex-column bg-light"
+       style="height: 60vh; overflow-y: auto;">
+    {% for mensaje in mensajes %}
+      {% set es_mio = mensaje.id_usuario == current_user.id %}
+      <div class="p-2 rounded mb-2 {{ 'bg-primary text-white ms-auto' if es_mio else 'bg-white border' }}"
+           style="max-width: 75%;">
+        <div class="small {{ 'text-white-50' if es_mio else 'text-muted' }}">
+          {{ mensaje.usuario.nombre }} · {{ mensaje.enviado_en.strftime("%H:%M") }}
+        </div>
+        <div>{{ mensaje.texto }}</div>
+      </div>
+    {% else %}
+      <p class="text-muted text-center my-auto">Aún no hay mensajes. ¡Escribe el primero!</p>
+    {% endfor %}
+  </div>
+  <div id="aviso-escribiendo" class="px-3 small text-muted fst-italic" style="min-height: 1.4em;"></div>
+  <div class="card-footer bg-white">
+    <form id="formulario-mensaje" class="d-flex gap-2" autocomplete="off">
+      <input id="campo-texto" class="form-control" maxlength="1000"
+             placeholder="Escribe un mensaje..." autofocus>
+      <button class="btn btn-primary" type="submit">Enviar</button>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/socket.io@4.7.5/client-dist/socket.io.min.js"></script>
+<script src="{{ url_for('chat.static', filename='chat.js') }}"></script>
+{% endblock %}

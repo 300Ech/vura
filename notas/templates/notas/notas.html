@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block titulo %}Notas de {{ proyecto.nombre }}{% endblock %}
+
+{% block contenido %}
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 mb-0">Notas de «{{ proyecto.nombre }}»</h1>
+    <a class="text-muted small" href="{{ url_for('proyectos.ver_proyecto', id_proyecto=proyecto.id) }}">
+      Volver al proyecto
+    </a>
+  </div>
+  <div class="text-end">
+    <span id="estado-guardado" class="text-muted small me-2">
+      {% if nota %}Última edición: {{ nota.actualizado_en.strftime("%d/%m %H:%M") }}{% else %}Sin notas todavía{% endif %}
+    </span>
+    <button id="boton-guardar" class="btn btn-primary btn-sm">Guardar</button>
+  </div>
+</div>
+
+<div id="notas" data-id-proyecto="{{ proyecto.id }}" class="card shadow-sm">
+  <div class="card-body p-0 bg-white">
+    <div id="editor" style="min-height: 55vh;"></div>
+  </div>
+</div>
+
+<script id="contenido-inicial" type="application/json">{{ contenido | safe }}</script>
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/socket.io@4.7.5/client-dist/socket.io.min.js"></script>
+<script type="module" src="{{ url_for('notas.static', filename='notas.js') }}"></script>
+{% endblock %}

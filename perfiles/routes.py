@@ -21,9 +21,9 @@ def editar_perfil():
     formulario = FormularioPerfil(obj=current_user)
     if formulario.validate_on_submit():
         current_user.nombre = formulario.nombre.data.strip()
-        current_user.grado = formulario.grado.data.strip() or None
-        current_user.descripcion = formulario.descripcion.data.strip() or None
-        current_user.avatar = formulario.avatar.data.strip() or None
+        current_user.grado = (formulario.grado.data or "").strip() or None
+        current_user.descripcion = (formulario.descripcion.data or "").strip() or None
+        current_user.avatar = (formulario.avatar.data or "").strip() or None
         db.session.commit()
         flash("Perfil actualizado.", "success")
         return redirect(url_for("perfiles.ver_perfil", id_usuario=current_user.id))

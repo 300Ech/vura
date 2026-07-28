@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block titulo %}Videollamada de {{ equipo.nombre }}{% endblock %}
+
+{% block contenido %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+  /* Estilo tipo Meet: fondo oscuro, videos centrados y controles abajo. */
+  #llamada {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 140px);
+    background: #202124;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  #cuadricula-videos {
+    flex: 1;
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+    place-items: stretch;
+    min-height: 0;
+  }
+  .celda-video {
+    position: relative;
+    background: #3c4043;
+    border-radius: 8px;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .celda-video video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* llena la celda recortando, en vez de dejar barras negras */
+  }
+  .nombre-video {
+    position: absolute;
+    left: 10px;
+    bottom: 8px;
+    color: white;
+    font-size: 0.85rem;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  }
+  #barra-controles {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+  }
+  #barra-controles button {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: none;
+    font-size: 1.2rem;
+    color: white;
+    background: #3c4043;
+  }
+  #barra-controles button.apagado {
+    background: #ea4335;
+  }
+  #boton-colgar {
+    background: #ea4335 !important;
+    width: 64px !important;
+  }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h1 class="h5 mb-0">Videollamada de «{{ equipo.nombre }}»</h1>
+  <span id="estado-llamada" class="text-muted small">Conectando...</span>
+</div>
+
+<div id="llamada" data-id-equipo="{{ equipo.id }}"
+     data-url-chat="{{ url_for('chat.sala', id_equipo=equipo.id) }}">
+  <div id="cuadricula-videos">
+    <div class="celda-video">
+      <video id="video-local" autoplay playsinline muted></video>
+      <span class="nombre-video">Tú</span>
+    </div>
+  </div>
+  <div id="barra-controles">
+    <button id="boton-microfono" type="button" title="Silenciar micrófono"><i class="bi bi-mic-fill"></i></button>
+    <button id="boton-camara" type="button" title="Apagar cámara"><i class="bi bi-camera-video-fill"></i></button>
+    <button id="boton-colgar" type="button" title="Colgar"><i class="bi bi-telephone-x-fill"></i></button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/socket.io@4.7.5/client-dist/socket.io.min.js"></script>
+<script src="{{ url_for('chat.static', filename='llamada.js') }}"></script>
+{% endblock %}
