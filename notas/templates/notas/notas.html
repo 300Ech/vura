@@ -3,15 +3,47 @@
 
 {% block contenido %}
 <style>
+  /* Pizarra Fullscreen */
+  nav.navbar { display: none !important; }
+  main.container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+  
+  #notas {
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+  #notas .card-body {
+    padding: 0 !important;
+  }
+
   #zona-pizarra {
     position: relative;
     overflow: auto;
-    max-height: 74vh;
-    border-radius: 8px;
-    /* Fondo punteado, como las pizarras de verdad. */
-    background-color: #fdfdfd;
-    background-image: radial-gradient(#d0d4d9 1px, transparent 1px);
-    background-size: 22px 22px;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    /* Fondo transparente porque ya lo tiene el body */
+    background-color: transparent;
+    background-image: none;
+  }
+  
+  /* Controles superiores flotantes */
+  .pizarra-top-controls {
+    position: fixed;
+    top: 16px;
+    left: 80px; /* Deja espacio para el dock lateral */
+    right: 16px;
+    z-index: 1000;
+    pointer-events: none; /* Clics pasan al lienzo */
+  }
+  .pizarra-top-controls > * {
+    pointer-events: auto; /* Reactivar clics en los controles */
+    background: rgba(255, 255, 255, 0.9);
+    padding: 8px 12px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-solid, 4px 4px 0 rgba(0,0,0,0.15));
+    border: var(--border-thickness, 2px) solid var(--border-dark, #1e293b);
   }
   /* Menú inferior flotante y centrado, estilo FigJam. */
   #menu-pizarra {
@@ -102,7 +134,7 @@
   }
 </style>
 
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+<div class="pizarra-top-controls d-flex justify-content-between align-items-center flex-wrap gap-2">
   <div class="d-flex align-items-center gap-2">
     <h1 class="h4 mb-0">Pizarra</h1>
     {# Selector para saltar entre las pizarras de mis proyectos. #}
