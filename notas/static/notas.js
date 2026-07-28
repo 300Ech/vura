@@ -96,6 +96,7 @@ objetosCompartidos.observe((evento) => {
     }
   });
   aplicandoRemoto = false;
+  ordenarCapas();
   lienzo.renderAll();
   programarCopia();
 });
@@ -141,6 +142,17 @@ function cargarDesdeCompartido() {
     });
   });
   aplicandoRemoto = false;
+  ordenarCapas();
+  lienzo.renderAll();
+}
+
+function ordenarCapas() {
+  // Mueve los post-its y textos por encima de cualquier trazo (lápiz)
+  lienzo.getObjects().forEach((obj) => {
+    if (obj.type === "post-it" || obj.type === "textbox" || obj.type === "i-text") {
+      lienzo.bringToFront(obj);
+    }
+  });
 }
 
 cargarDesdeCompartido();
@@ -154,6 +166,7 @@ lienzo.on("object:modified", (evento) => {
 // Un trazo del lápiz recién terminado también se comparte.
 lienzo.on("path:created", (evento) => {
   if (!aplicandoRemoto) publicarObjeto(evento.path);
+  ordenarCapas();
 });
 
 // Al escribir dentro de un texto, se comparte con una pequeña espera.
@@ -165,7 +178,13 @@ lienzo.on("text:changed", (evento) => {
 
 // ---- Menú inferior ----
 
+function desactivarLapiz() {
+  lienzo.isDrawingMode = false;
+  document.getElementById("boton-lapiz").classList.remove("active");
+}
+
 function agregarPostIt() {
+  desactivarLapiz();
   const postIt = crearPostIt("Escribe aquí", {
     left: 80 + Math.random() * 200,
     top: 80 + Math.random() * 150,
@@ -181,6 +200,7 @@ lienzo.on("mouse:dblclick", (evento) => {
 });
 
 document.getElementById("boton-texto-suelto").addEventListener("click", () => {
+  desactivarLapiz();
   const texto = new fabric.IText("Texto", {
     left: 120 + Math.random() * 200,
     top: 120 + Math.random() * 150,
