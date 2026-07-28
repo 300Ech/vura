@@ -1,6 +1,6 @@
 import time
 
-from flask import Blueprint, render_template, abort, request
+from flask import Blueprint, render_template, abort, request, jsonify
 from flask_login import login_required, current_user
 from flask_socketio import join_room, leave_room, rooms, emit
 
@@ -29,6 +29,21 @@ def sala(id_equipo):
                 .order_by(Mensaje.enviado_en)
                 .limit(200).all())
     return render_template("chat/sala.html", equipo=equipo, mensajes=mensajes)
+
+
+@chat.route("/equipos/<int:id_equipo>/chat/mensajes")
+@login_required
+def mensajes_recientes(id_equipo):
+    """Historial en JSON, para el panel de chat que se abre sobre la pizarra."""
+    obtener_equipo_de_miembro(id_equipo)
+    mensajes = (Mensaje.query.filter_by(id_equipo=id_equipo)
+                .order_by(Mensaje.enviado_en.desc())
+                .limit(50).all())
+    return jsonify({"mensajes": [
+        {"nombre": m.usuario.nombre, "id_usuario": m.id_usuario,
+         "texto": m.texto, "hora": hora_local(m.enviado_en, "%H:%M")}
+        for m in reversed(mensajes)
+    ]})
 
 
 @chat.route("/equipos/<int:id_equipo>/llamada")

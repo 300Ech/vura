@@ -45,6 +45,61 @@
     background: #212529;
     color: white;
   }
+  /* Dock lateral: los accesos del proyecto siempre a mano, estilo FigJam. */
+  #dock-pizarra {
+    position: fixed;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: white;
+    border: var(--border-thickness, 2px) solid var(--border-dark, #1e293b);
+    border-radius: 12px;
+    box-shadow: var(--shadow-solid, 4px 4px 0 rgba(0, 0, 0, 0.15));
+    padding: 8px 6px;
+    z-index: 1000;
+  }
+  #dock-pizarra a, #dock-pizarra button {
+    border: none;
+    background: none;
+    font-size: 1.25rem;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 8px;
+    padding: 6px 8px;
+    line-height: 1;
+  }
+  #dock-pizarra a:hover, #dock-pizarra button:hover {
+    background: var(--sticky-yellow, #fde047);
+  }
+  /* Panel de chat que se desliza sobre la pizarra. */
+  #panel-chat {
+    position: fixed;
+    top: 0;
+    right: -360px;
+    width: 350px;
+    height: 100vh;
+    background: white;
+    border-left: var(--border-thickness, 2px) solid var(--border-dark, #1e293b);
+    box-shadow: -6px 0 18px rgba(0, 0, 0, 0.15);
+    z-index: 1500;
+    display: flex;
+    flex-direction: column;
+    transition: right 0.25s ease;
+  }
+  #panel-chat.abierto {
+    right: 0;
+  }
+  #panel-chat .mensajes {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-color, #f3f4f6);
+  }
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -59,23 +114,33 @@
       {% endfor %}
     </select>
   </div>
-  <div class="d-flex align-items-center gap-2">
-    <span id="estado-guardado" class="text-muted small">
-      {% if nota %}Última edición: {{ nota.actualizado_en | hora_local }}{% else %}Pizarra nueva{% endif %}
-    </span>
-    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('proyectos.ver_proyecto', id_proyecto=proyecto.id) }}">
-      Ver proyecto
-    </a>
-    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('tareas.tablero', id_proyecto=proyecto.id) }}">
-      Tareas
-    </a>
-    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('presentaciones.editor', id_proyecto=proyecto.id) }}">
-      Presentación
-    </a>
-    <a class="btn btn-sm btn-outline-success" href="{{ url_for('chat.sala', id_equipo=proyecto.equipo.id) }}">
-      💬 Chat
-    </a>
+  <span id="estado-guardado" class="text-muted small">
+    {% if nota %}Última edición: {{ nota.actualizado_en | hora_local }}{% else %}Pizarra nueva{% endif %}
+  </span>
+</div>
+
+{# Dock lateral: todo el proyecto gira en torno a la pizarra. #}
+<div id="dock-pizarra">
+  <button id="boton-panel-chat" type="button" title="Chat del equipo">💬</button>
+  <a href="{{ url_for('chat.llamada', id_equipo=proyecto.equipo.id) }}" title="Videollamada">📹</a>
+  <a href="{{ url_for('tareas.tablero', id_proyecto=proyecto.id) }}" title="Tareas">🗂️</a>
+  <a href="{{ url_for('presentaciones.editor', id_proyecto=proyecto.id) }}" title="Presentación">🖼️</a>
+  <a href="{{ url_for('proyectos.ver_proyecto', id_proyecto=proyecto.id) }}" title="Ver proyecto">📁</a>
+  <a href="{{ url_for('equipos.ver_equipo', id_equipo=proyecto.equipo.id) }}" title="Equipo">👥</a>
+</div>
+
+{# Panel de chat sobre la pizarra: chateás sin dejar de ver los post-its. #}
+<div id="panel-chat" data-id-equipo="{{ proyecto.equipo.id }}" data-id-usuario="{{ current_user.id }}">
+  <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+    <strong>💬 {{ proyecto.equipo.nombre }}</strong>
+    <button id="boton-cerrar-chat" type="button" class="btn-close"></button>
   </div>
+  <div id="mensajes-panel" class="mensajes"></div>
+  <div id="aviso-escribiendo-panel" class="px-3 small text-muted fst-italic" style="min-height: 1.4em;"></div>
+  <form id="formulario-chat-panel" class="d-flex gap-2 p-2 border-top" autocomplete="off">
+    <input id="texto-chat-panel" class="form-control form-control-sm" maxlength="1000" placeholder="Escribe un mensaje...">
+    <button class="btn btn-sm btn-primary" type="submit">Enviar</button>
+  </form>
 </div>
 
 <script>

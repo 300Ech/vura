@@ -16,6 +16,40 @@ const lienzo = new fabric.Canvas("lienzo-pizarra", { preserveObjectStacking: tru
 // El color elegido en la paleta se usa para post-its nuevos y para el lápiz.
 let colorActual = "#fde047"; // amarillo post-it vibrante
 
+// ---- Post-it de verdad ----
+// Es un Textbox de Fabric con dos detalles extra que lo hacen parecer papel:
+// nunca es más bajo que ancho (el papelito es cuadrado aunque tenga poco texto)
+// y viene con una pequeña inclinación aleatoria, como pegado a mano.
+
+const PostIt = fabric.util.createClass(fabric.Textbox, {
+  type: "post-it",
+
+  initDimensions: function () {
+    this.callSuper("initDimensions");
+    this.height = Math.max(this.height, this.width);
+  },
+});
+
+// Permite que Fabric reconstruya los post-its guardados o los de un compañero.
+PostIt.fromObject = function (objeto, callback) {
+  return fabric.Object._fromObject("PostIt", objeto, callback, "text");
+};
+fabric.PostIt = PostIt;
+
+function crearPostIt(texto, opciones) {
+  return new PostIt(texto, {
+    width: 190,
+    fontSize: 28,
+    fontFamily: "Caveat",
+    fill: "#1e293b",
+    backgroundColor: colorActual,
+    padding: 14,
+    angle: Math.random() * 6 - 3, // inclinación de -3° a +3°
+    shadow: { color: "rgba(0,0,0,0.2)", blur: 4, offsetX: 4, offsetY: 5 },
+    ...opciones,
+  });
+}
+
 const ORIGEN_LOCAL = "local";
 const doc = new Y.Doc();
 const objetosCompartidos = doc.getMap("objetos"); // uuid -> objeto de Fabric en JSON
@@ -85,15 +119,8 @@ conectarDocumento({
           .map((operacion) => (typeof operacion.insert === "string" ? operacion.insert : ""))
           .join("").trim();
         if (texto) {
-          objetosCompartidos.set(crypto.randomUUID(), {
-            type: "textbox",
-            text: texto.slice(0, 2000),
-            left: 60, top: 60, width: 420,
-            fontSize: 28, fontFamily: "Caveat",
-            fill: "#1e293b", backgroundColor: "#fde047",
-            padding: 16,
-            shadow: { color: 'rgba(0,0,0,0.15)', blur: 0, offsetX: 5, offsetY: 5 }
-          });
+          const postIt = crearPostIt(texto.slice(0, 2000), { left: 60, top: 60, width: 420 });
+          objetosCompartidos.set(crypto.randomUUID(), postIt.toObject(["uuid"]));
         }
       }
     }, ORIGEN_LOCAL);
@@ -139,16 +166,9 @@ lienzo.on("text:changed", (evento) => {
 // ---- Menú inferior ----
 
 function agregarPostIt() {
-  const postIt = new fabric.Textbox("Escribe aquí", {
+  const postIt = crearPostIt("Escribe aquí", {
     left: 80 + Math.random() * 200,
     top: 80 + Math.random() * 150,
-    width: 220,
-    fontSize: 28,
-    fontFamily: "Caveat",
-    fill: "#1e293b",
-    backgroundColor: colorActual,
-    padding: 16,
-    shadow: { color: 'rgba(0,0,0,0.15)', blur: 0, offsetX: 5, offsetY: 5 }
   });
   lienzo.add(postIt);
   lienzo.setActiveObject(postIt);
@@ -189,7 +209,7 @@ document.querySelectorAll(".muestra-color").forEach((muestra) => {
     document.querySelectorAll(".muestra-color").forEach((m) => m.classList.remove("activa"));
     muestra.classList.add("activa");
     const objeto = lienzo.getActiveObject();
-    if (objeto && objeto.type === "textbox") {
+    if (objeto && (objeto.type === "post-it" || objeto.type === "textbox")) {
       objeto.set("backgroundColor", colorActual);
       lienzo.renderAll();
       publicarObjeto(objeto);
@@ -263,3 +283,83 @@ window.addEventListener("beforeunload", (evento) => {
     evento.preventDefault();
   }
 });
+
+// ---- Panel de chat sobre la pizarra ----
+// Reutiliza los mismos eventos de Socket.IO del chat normal;
+// el historial se pide al servidor la primera vez que se abre.
+
+const panelChat = document.getElementById("panel-chat");
+const idEquipo = Number(panelChat.dataset.idEquipo);
+const idUsuarioActual = Number(panelChat.dataset.idUsuario);
+const mensajesPanel = document.getElementById("mensajes-panel");
+const avisoEscribiendoPanel = document.getElementById("aviso-escribiendo-panel");
+const textoChatPanel = document.getElementById("texto-chat-panel");
+
+const socketChat = io();
+let historialCargado = false;
+
+socketChat.on("connect", () => {
+  socketChat.emit("unirse_sala", { id_equipo: idEquipo });
+});
+
+document.getElementById("boton-panel-chat").addEventListener("click", async () => {
+  panelChat.classList.toggle("abierto");
+  if (panelChat.classList.contains("abierto")) {
+    if (!historialCargado) {
+      historialCargado = true;
+      const respuesta = await fetch(`/equipos/${idEquipo}/chat/mensajes`);
+      const datos = await respuesta.json();
+      datos.mensajes.forEach(agregarMensajePanel);
+    }
+    textoChatPanel.focus();
+  }
+});
+
+document.getElementById("boton-cerrar-chat").addEventListener("click", () => {
+  panelChat.classList.remove("abierto");
+});
+
+socketChat.on("nuevo_mensaje", (mensaje) => {
+  avisoEscribiendoPanel.textContent = "";
+  if (historialCargado) agregarMensajePanel(mensaje);
+});
+
+socketChat.on("usuario_escribiendo", (datos) => {
+  avisoEscribiendoPanel.textContent = datos.nombre + " está escribiendo...";
+  setTimeout(() => { avisoEscribiendoPanel.textContent = ""; }, 3000);
+});
+
+let ultimoAvisoEscribiendo = 0;
+textoChatPanel.addEventListener("input", () => {
+  const ahora = Date.now();
+  if (ahora - ultimoAvisoEscribiendo > 2000) {
+    ultimoAvisoEscribiendo = ahora;
+    socketChat.emit("escribiendo", { id_equipo: idEquipo });
+  }
+});
+
+document.getElementById("formulario-chat-panel").addEventListener("submit", (evento) => {
+  evento.preventDefault();
+  const texto = textoChatPanel.value.trim();
+  if (!texto) return;
+  socketChat.emit("enviar_mensaje", { id_equipo: idEquipo, texto: texto });
+  textoChatPanel.value = "";
+  textoChatPanel.focus();
+});
+
+function agregarMensajePanel(mensaje) {
+  const esMio = mensaje.id_usuario === idUsuarioActual;
+  const burbuja = document.createElement("div");
+  burbuja.className = "p-2 rounded mb-2 small " + (esMio ? "bg-primary text-white ms-auto" : "bg-white border");
+  burbuja.style.maxWidth = "85%";
+
+  const encabezado = document.createElement("div");
+  encabezado.className = "small " + (esMio ? "text-white-50" : "text-muted");
+  encabezado.textContent = mensaje.nombre + " · " + mensaje.hora;
+  const cuerpo = document.createElement("div");
+  cuerpo.textContent = mensaje.texto;
+
+  burbuja.append(encabezado, cuerpo);
+  mensajesPanel.appendChild(burbuja);
+  mensajesPanel.scrollTop = mensajesPanel.scrollHeight;
+}
