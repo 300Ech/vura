@@ -7,6 +7,7 @@ from flask import Blueprint, render_template, request, jsonify, abort, send_from
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
+from config import RUTA_DATOS
 from extensiones import db
 from proyectos.models import Proyecto
 from tareas.models import Tarea, ComentarioTarea, ArchivoTarea, ESTADOS_TAREA, TITULOS_ESTADO
@@ -16,9 +17,9 @@ tareas = Blueprint("tareas", __name__, template_folder="templates",
 
 LIMITE_TAREAS = 300
 
-# Los archivos adjuntos se guardan en la carpeta "archivos" junto al código;
+# Los archivos adjuntos se guardan en la carpeta "archivos" (dentro de la ruta de datos);
 # en la base de datos solo se guarda el registro de cada uno.
-CARPETA_ARCHIVOS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "archivos")
+CARPETA_ARCHIVOS = os.path.join(RUTA_DATOS, "archivos")
 EXTENSIONES_PERMITIDAS = {"pdf", "png", "jpg", "jpeg", "gif", "docx", "pptx", "xlsx", "txt"}
 TAMANO_MAXIMO = 5 * 1024 * 1024  # 5 MB
 

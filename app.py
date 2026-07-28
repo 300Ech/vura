@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask, render_template
 from flask_login import login_required, current_user
 
@@ -68,5 +70,8 @@ def service_worker():
 
 
 if __name__ == "__main__":
+    # En Railway el puerto llega en la variable PORT; localmente se usa el 5000 de siempre.
+    puerto = int(os.environ.get("PORT", 5000))
+    en_produccion = "PORT" in os.environ
     # allow_unsafe_werkzeug: permite usar el servidor de desarrollo de Flask; suficiente para la escuela.
-    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
+    socketio.run(app, host="0.0.0.0", port=puerto, debug=not en_produccion, allow_unsafe_werkzeug=True)
