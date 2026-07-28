@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 
 from chat.routes import notificar_equipo
 from config import RUTA_DATOS
-from extensiones import db
+from extensiones import db, hora_local
 from proyectos.models import Proyecto
 from tareas.models import Tarea, ComentarioTarea, ArchivoTarea, ESTADOS_TAREA, TITULOS_ESTADO
 
@@ -179,7 +179,7 @@ def detalles_tarea(id_proyecto, uuid_tarea):
                 .order_by(ArchivoTarea.id).all())
     return jsonify({
         "comentarios": [
-            {"autor": c.autor.nombre, "texto": c.texto, "fecha": c.creado_en.strftime("%d/%m %H:%M")}
+            {"autor": c.autor.nombre, "texto": c.texto, "fecha": hora_local(c.creado_en)}
             for c in comentarios
         ],
         "archivos": [
@@ -210,7 +210,7 @@ def comentar_tarea(id_proyecto, uuid_tarea):
         f"/proyectos/{id_proyecto}/tareas",
     )
     return jsonify({"autor": current_user.nombre, "texto": comentario.texto,
-                    "fecha": comentario.creado_en.strftime("%d/%m %H:%M")})
+                    "fecha": hora_local(comentario.creado_en)})
 
 
 @tareas.route("/proyectos/<int:id_proyecto>/tareas/<uuid_tarea>/archivos", methods=["POST"])

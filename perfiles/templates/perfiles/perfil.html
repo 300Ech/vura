@@ -24,7 +24,7 @@
         {% if usuario.descripcion %}
           <p class="mt-2">{{ usuario.descripcion }}</p>
         {% endif %}
-        <p class="text-muted small">Miembro desde {{ usuario.creado_en.strftime("%d/%m/%Y") }}</p>
+        <p class="text-muted small">Miembro desde {{ usuario.creado_en | hora_local("%d/%m/%Y") }}</p>
 
         {% if usuario.id == current_user.id %}
           <a class="btn btn-outline-primary" href="{{ url_for('perfiles.editar_perfil') }}">Editar perfil</a>

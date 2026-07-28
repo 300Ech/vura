@@ -3,7 +3,7 @@ import json
 from flask import Blueprint, render_template, request, jsonify, abort
 from flask_login import login_required, current_user
 
-from extensiones import db
+from extensiones import db, hora_local
 from proyectos.models import Proyecto
 from notas.models import Nota
 
@@ -75,5 +75,5 @@ def guardar_notas(id_proyecto):
 
     return jsonify({
         "guardado": True,
-        "actualizado_en": nota.actualizado_en.strftime("%H:%M:%S"),
+        "actualizado_en": hora_local(nota.actualizado_en, "%H:%M:%S"),
     })

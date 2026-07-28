@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, abort, request
 from flask_login import login_required, current_user
 from flask_socketio import join_room, leave_room, rooms, emit
 
-from extensiones import db, socketio
+from extensiones import db, socketio, hora_local
 from equipos.models import Equipo, MiembroEquipo
 from chat.models import Mensaje
 
@@ -199,7 +199,7 @@ def enviar_mensaje(datos):
         "nombre": current_user.nombre,
         "id_usuario": current_user.id,
         "texto": mensaje.texto,
-        "hora": mensaje.enviado_en.strftime("%H:%M"),
+        "hora": hora_local(mensaje.enviado_en, "%H:%M"),
         "id_equipo": equipo.id,
         "nombre_equipo": equipo.nombre,
     }, room=f"equipo_{id_equipo}")

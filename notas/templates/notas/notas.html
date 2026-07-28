@@ -61,7 +61,7 @@
   </div>
   <div class="d-flex align-items-center gap-2">
     <span id="estado-guardado" class="text-muted small">
-      {% if nota %}Última edición: {{ nota.actualizado_en.strftime("%d/%m %H:%M") }}{% else %}Pizarra nueva{% endif %}
+      {% if nota %}Última edición: {{ nota.actualizado_en | hora_local }}{% else %}Pizarra nueva{% endif %}
     </span>
     <a class="btn btn-sm btn-outline-primary" href="{{ url_for('proyectos.ver_proyecto', id_proyecto=proyecto.id) }}">
       Ver proyecto
@@ -91,11 +91,11 @@
       <div id="menu-pizarra">
         <div class="barra">
           <button id="boton-postit" class="btn btn-sm btn-outline-primary" type="button" title="Post-it (o doble clic en la pizarra)">🗒️ Post-it</button>
-          <button class="muestra-color activa" type="button" data-color="#fff59d" style="background: #fff59d" title="Amarillo"></button>
-          <button class="muestra-color" type="button" data-color="#f8bbd0" style="background: #f8bbd0" title="Rosa"></button>
-          <button class="muestra-color" type="button" data-color="#c8e6c9" style="background: #c8e6c9" title="Verde"></button>
-          <button class="muestra-color" type="button" data-color="#b3e5fc" style="background: #b3e5fc" title="Celeste"></button>
-          <button class="muestra-color" type="button" data-color="#ffe0b2" style="background: #ffe0b2" title="Naranja"></button>
+          <button class="muestra-color activa" type="button" data-color="#fde047" style="background: #fde047" title="Amarillo"></button>
+          <button class="muestra-color" type="button" data-color="#f9a8d4" style="background: #f9a8d4" title="Rosa"></button>
+          <button class="muestra-color" type="button" data-color="#86efac" style="background: #86efac" title="Verde"></button>
+          <button class="muestra-color" type="button" data-color="#93c5fd" style="background: #93c5fd" title="Celeste"></button>
+          <button class="muestra-color" type="button" data-color="#d8b4fe" style="background: #d8b4fe" title="Morado"></button>
           <span class="vr"></span>
           <button id="boton-texto-suelto" class="btn btn-sm btn-outline-primary" type="button">Texto</button>
           <button id="boton-lapiz" class="btn btn-sm btn-outline-secondary" type="button">✏️ Lápiz</button>

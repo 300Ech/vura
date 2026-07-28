@@ -14,7 +14,7 @@ const indicadorEstado = document.getElementById("estado-guardado");
 const lienzo = new fabric.Canvas("lienzo-pizarra", { preserveObjectStacking: true });
 
 // El color elegido en la paleta se usa para post-its nuevos y para el lápiz.
-let colorActual = "#fff59d"; // amarillo post-it
+let colorActual = "#fde047"; // amarillo post-it vibrante
 
 const ORIGEN_LOCAL = "local";
 const doc = new Y.Doc();
@@ -89,8 +89,10 @@ conectarDocumento({
             type: "textbox",
             text: texto.slice(0, 2000),
             left: 60, top: 60, width: 420,
-            fontSize: 18, fontFamily: "Arial",
-            fill: "#333333", backgroundColor: "#fff59d",
+            fontSize: 28, fontFamily: "Caveat",
+            fill: "#1e293b", backgroundColor: "#fde047",
+            padding: 16,
+            shadow: { color: 'rgba(0,0,0,0.15)', blur: 0, offsetX: 5, offsetY: 5 }
           });
         }
       }
@@ -140,11 +142,13 @@ function agregarPostIt() {
   const postIt = new fabric.Textbox("Escribe aquí", {
     left: 80 + Math.random() * 200,
     top: 80 + Math.random() * 150,
-    width: 180,
-    fontSize: 20,
-    fontFamily: "Arial",
-    fill: "#333333",
+    width: 220,
+    fontSize: 28,
+    fontFamily: "Caveat",
+    fill: "#1e293b",
     backgroundColor: colorActual,
+    padding: 16,
+    shadow: { color: 'rgba(0,0,0,0.15)', blur: 0, offsetX: 5, offsetY: 5 }
   });
   lienzo.add(postIt);
   lienzo.setActiveObject(postIt);
@@ -161,9 +165,9 @@ document.getElementById("boton-texto-suelto").addEventListener("click", () => {
     left: 120 + Math.random() * 200,
     top: 120 + Math.random() * 150,
     width: 250,
-    fontSize: 28,
-    fontFamily: "Arial",
-    fill: "#212529",
+    fontSize: 32,
+    fontFamily: "Caveat",
+    fill: "#1e293b",
   });
   lienzo.add(texto);
   lienzo.setActiveObject(texto);

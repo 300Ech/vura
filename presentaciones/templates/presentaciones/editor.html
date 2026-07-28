@@ -59,7 +59,7 @@
   </div>
   <div class="d-flex align-items-center gap-2">
     <span id="estado-guardado" class="text-muted small">
-      Última edición: {{ presentacion.actualizado_en.strftime("%d/%m %H:%M") }}
+      Última edición: {{ presentacion.actualizado_en | hora_local }}
     </span>
     <button id="boton-presentar" class="btn btn-success" type="button">▶ Presentar</button>
   </div>

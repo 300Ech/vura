@@ -21,7 +21,7 @@
       <div class="p-2 rounded mb-2 {{ 'bg-primary text-white ms-auto' if es_mio else 'bg-white border' }}"
            style="max-width: 75%;">
         <div class="small {{ 'text-white-50' if es_mio else 'text-muted' }}">
-          {{ mensaje.usuario.nombre }} · {{ mensaje.enviado_en.strftime("%H:%M") }}
+          {{ mensaje.usuario.nombre }} · {{ mensaje.enviado_en | hora_local("%H:%M") }}
         </div>
         <div>{{ mensaje.texto }}</div>
       </div>

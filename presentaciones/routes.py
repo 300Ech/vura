@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, request, jsonify, abort
 from flask_login import login_required, current_user
 
 from chat.routes import notificar_equipo
-from extensiones import db
+from extensiones import db, hora_local
 from proyectos.models import Proyecto
 from presentaciones.models import Presentacion, Diapositiva
 
@@ -78,7 +78,7 @@ def guardar_diapositiva(id_diapositiva):
         clave_repeticion=f"presentacion_{proyecto.id}_{current_user.id}",
         minutos_espera=10,
     )
-    return jsonify({"guardado": True, "actualizado_en": diapositiva.actualizado_en.strftime("%H:%M:%S")})
+    return jsonify({"guardado": True, "actualizado_en": hora_local(diapositiva.actualizado_en, "%H:%M:%S")})
 
 
 @presentaciones.route("/presentaciones/<int:id_presentacion>/diapositivas/crear", methods=["POST"])

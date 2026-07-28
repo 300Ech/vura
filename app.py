@@ -4,10 +4,11 @@ from flask import Flask, render_template
 from flask_login import login_required, current_user
 
 from config import Config
-from extensiones import db, administrador_sesion, bcrypt, socketio
+from extensiones import db, administrador_sesion, bcrypt, socketio, hora_local
 
 app = Flask(__name__)
 app.config.from_object(Config)
+app.jinja_env.filters["hora_local"] = hora_local
 
 db.init_app(app)
 bcrypt.init_app(app)
