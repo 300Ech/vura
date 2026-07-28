@@ -181,13 +181,14 @@ lienzo.on("mouse:dblclick", (evento) => {
 });
 
 document.getElementById("boton-texto-suelto").addEventListener("click", () => {
-  const texto = new fabric.Textbox("Texto", {
+  const texto = new fabric.IText("Texto", {
     left: 120 + Math.random() * 200,
     top: 120 + Math.random() * 150,
-    width: 250,
     fontSize: 32,
     fontFamily: "Caveat",
     fill: "#1e293b",
+    padding: 8, /* Añade área de agarre */
+    transparentCorners: false
   });
   lienzo.add(texto);
   lienzo.setActiveObject(texto);
@@ -209,7 +210,7 @@ document.querySelectorAll(".muestra-color").forEach((muestra) => {
     document.querySelectorAll(".muestra-color").forEach((m) => m.classList.remove("activa"));
     muestra.classList.add("activa");
     const objeto = lienzo.getActiveObject();
-    if (objeto && (objeto.type === "post-it" || objeto.type === "textbox")) {
+    if (objeto && (objeto.type === "post-it" || objeto.type === "textbox" || objeto.type === "i-text")) {
       objeto.set("backgroundColor", colorActual);
       lienzo.renderAll();
       publicarObjeto(objeto);
