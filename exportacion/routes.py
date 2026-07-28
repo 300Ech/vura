@@ -41,8 +41,23 @@ def nombre_de_archivo(texto, extension):
 
 # ---- PDF: resumen del proyecto y notas (ReportLab) ----
 
+def parrafos_desde_pizarra(contenido_json, estilos):
+    """Convierte la pizarra en una lista: cada post-it o texto es una viñeta del PDF."""
+    try:
+        objetos = json.loads(contenido_json).get("objetos", {})
+    except (ValueError, AttributeError):
+        return []
+
+    parrafos = []
+    for objeto in objetos.values():
+        texto = (objeto.get("text") or "").strip()
+        if objeto.get("type") in ("textbox", "i-text", "text") and texto:
+            parrafos.append(Paragraph("• " + escape(texto.replace("\n", " ")), estilos["BodyText"]))
+    return parrafos
+
+
 def parrafos_desde_delta(delta_json, estilos):
-    """Convierte el Delta de Quill en párrafos de ReportLab (texto y formato básico)."""
+    """Convierte el Delta de Quill (notas del formato viejo) en párrafos de ReportLab."""
     try:
         operaciones = json.loads(delta_json).get("ops", [])
     except (ValueError, AttributeError):
@@ -102,10 +117,12 @@ def exportar_pdf(id_proyecto):
     else:
         contenido.append(Paragraph("Sin tareas registradas.", estilos["BodyText"]))
 
-    contenido += [Spacer(1, 0.6 * cm), Paragraph("Notas", estilos["Heading1"])]
-    parrafos_notas = parrafos_desde_delta(
-        proyecto.nota.contenido_json if proyecto.nota else None, estilos)
-    contenido += parrafos_notas or [Paragraph("Sin notas todavía.", estilos["BodyText"])]
+    contenido += [Spacer(1, 0.6 * cm), Paragraph("Pizarra", estilos["Heading1"])]
+    contenido_nota = proyecto.nota.contenido_json if proyecto.nota else None
+    # Primero se intenta el formato de pizarra; si son notas del formato viejo (Quill), también se leen.
+    parrafos_notas = (parrafos_desde_pizarra(contenido_nota, estilos)
+                      or parrafos_desde_delta(contenido_nota, estilos))
+    contenido += parrafos_notas or [Paragraph("La pizarra está vacía.", estilos["BodyText"])]
 
     archivo = io.BytesIO()
     SimpleDocTemplate(archivo, pagesize=letter, title=proyecto.nombre).build(contenido)

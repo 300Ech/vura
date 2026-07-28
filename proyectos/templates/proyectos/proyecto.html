@@ -48,16 +48,16 @@
   <div class="col-md-4">
     <div class="card shadow-sm text-center">
       <div class="card-body">
-        <h2 class="h6">Notas</h2>
+        <h2 class="h6">Pizarra</h2>
         <p class="text-muted small">
           {% if proyecto.nota %}
             Última edición: {{ proyecto.nota.actualizado_en.strftime("%d/%m %H:%M") }}
           {% else %}
-            Sin notas todavía
+            Pizarra nueva
           {% endif %}
         </p>
         <a class="btn btn-outline-primary btn-sm" href="{{ url_for('notas.ver_notas', id_proyecto=proyecto.id) }}">
-          Abrir notas
+          Abrir pizarra
         </a>
       </div>
     </div>

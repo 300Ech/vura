@@ -58,8 +58,8 @@ def guardar_notas(id_proyecto):
     from chat.routes import notificar_equipo
     notificar_equipo(
         proyecto.equipo.id,
-        f"📝 Notas de {proyecto.nombre}",
-        f"{current_user.nombre} está editando las notas.",
+        f"🗒️ Pizarra de {proyecto.nombre}",
+        f"{current_user.nombre} está editando la pizarra.",
         f"/proyectos/{proyecto.id}/notas",
         clave_repeticion=f"nota_{proyecto.id}_{current_user.id}",
         minutos_espera=10,

@@ -1,32 +1,88 @@
 {% extends "base.html" %}
-{% block titulo %}Notas de {{ proyecto.nombre }}{% endblock %}
+{% block titulo %}Pizarra de {{ proyecto.nombre }}{% endblock %}
 
 {% block contenido %}
-<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+<style>
+  #zona-pizarra {
+    position: relative;
+    overflow: auto;
+    max-height: 74vh;
+    border-radius: 8px;
+    /* Fondo punteado, como las pizarras de verdad. */
+    background-color: #fdfdfd;
+    background-image: radial-gradient(#d0d4d9 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  /* Menú inferior flotante y centrado, estilo FigJam. */
+  #menu-pizarra {
+    position: sticky;
+    bottom: 12px;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+  }
+  #menu-pizarra .barra {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+    padding: 8px 12px;
+  }
+  .muestra-color {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    padding: 0;
+  }
+  .muestra-color.activa {
+    border-color: #212529;
+  }
+  #boton-lapiz.active {
+    background: #212529;
+    color: white;
+  }
+</style>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
-    <h1 class="h4 mb-0">Notas de «{{ proyecto.nombre }}»</h1>
+    <h1 class="h4 mb-0">Pizarra de «{{ proyecto.nombre }}»</h1>
     <a class="text-muted small" href="{{ url_for('proyectos.ver_proyecto', id_proyecto=proyecto.id) }}">
       Volver al proyecto
     </a>
   </div>
-  <div class="text-end">
-    <span id="estado-guardado" class="text-muted small me-2">
-      {% if nota %}Última edición: {{ nota.actualizado_en.strftime("%d/%m %H:%M") }}{% else %}Sin notas todavía{% endif %}
-    </span>
-    <button id="boton-guardar" class="btn btn-primary btn-sm">Guardar</button>
-  </div>
+  <span id="estado-guardado" class="text-muted small">
+    {% if nota %}Última edición: {{ nota.actualizado_en.strftime("%d/%m %H:%M") }}{% else %}Pizarra nueva{% endif %}
+  </span>
 </div>
 
 <div id="notas" data-id-proyecto="{{ proyecto.id }}" class="card shadow-sm">
-  <div class="card-body p-0 bg-white">
-    <div id="editor" style="min-height: 55vh;"></div>
+  <div class="card-body p-2">
+    <div id="zona-pizarra">
+      <canvas id="lienzo-pizarra" width="1600" height="1000"></canvas>
+      <div id="menu-pizarra">
+        <div class="barra">
+          <button id="boton-postit" class="btn btn-sm btn-outline-primary" type="button" title="Post-it (o doble clic en la pizarra)">🗒️ Post-it</button>
+          <button class="muestra-color activa" type="button" data-color="#fff59d" style="background: #fff59d" title="Amarillo"></button>
+          <button class="muestra-color" type="button" data-color="#f8bbd0" style="background: #f8bbd0" title="Rosa"></button>
+          <button class="muestra-color" type="button" data-color="#c8e6c9" style="background: #c8e6c9" title="Verde"></button>
+          <button class="muestra-color" type="button" data-color="#b3e5fc" style="background: #b3e5fc" title="Celeste"></button>
+          <button class="muestra-color" type="button" data-color="#ffe0b2" style="background: #ffe0b2" title="Naranja"></button>
+          <span class="vr"></span>
+          <button id="boton-texto-suelto" class="btn btn-sm btn-outline-primary" type="button">Texto</button>
+          <button id="boton-lapiz" class="btn btn-sm btn-outline-secondary" type="button">✏️ Lápiz</button>
+          <button id="boton-borrar-objeto" class="btn btn-sm btn-outline-danger" type="button">Borrar</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
 <script id="contenido-inicial" type="application/json">{{ contenido | safe }}</script>
-<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/socket.io@4.7.5/client-dist/socket.io.min.js"></script>
 <script type="module" src="{{ url_for('notas.static', filename='notas.js') }}"></script>
 {% endblock %}
