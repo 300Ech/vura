@@ -1,97 +1,146 @@
-/* Solo el CSS que Bootstrap no resuelve. */
-
 :root {
-  --color-primario: #6366f1; /* Indigo vibrante */
-  --color-primario-hover: #4f46e5;
-  --color-fondo: #f8fafc; /* Gris azulado muy claro */
-  --radio-borde: 16px;
-  --radio-borde-pequeno: 10px;
-  --sombra-suave: 0 4px 12px rgba(0, 0, 0, 0.05);
-  --sombra-hover: 0 10px 20px rgba(99, 102, 241, 0.15);
+  /* FigJam-like Colors */
+  --bg-color: #f3f4f6; /* Light gray for background */
+  --dot-color: #d1d5db; /* Gray dots */
+  
+  /* Sticky Note Colors (Pastels) */
+  --sticky-yellow: #fde047; /* Bright pastel yellow */
+  --sticky-purple: #d8b4fe; /* Pastel purple */
+  --sticky-blue: #93c5fd;   /* Pastel blue */
+  --sticky-pink: #f9a8d4;   /* Pastel pink */
+  --sticky-green: #86efac;  /* Pastel green */
+  --sticky-orange: #fdba74; /* Pastel orange */
+  
+  /* UI Elements */
+  --border-dark: #1e293b;
+  --primary-btn: #8b5cf6; /* Vibrant violet for main buttons */
+  
+  /* Styling tokens */
+  --shadow-solid: 4px 4px 0px rgba(0, 0, 0, 0.15);
+  --shadow-solid-hover: 6px 6px 0px rgba(0, 0, 0, 0.2);
+  --border-thickness: 2px;
 }
 
 body {
   font-family: 'Nunito', sans-serif;
-  background-color: var(--color-fondo) !important;
-  color: #334155;
-}
-
-/* Redefinición de colores base de Bootstrap para elementos principales */
-.bg-primary {
-  background-color: var(--color-primario) !important;
-}
-
-.btn-primary {
-  background-color: var(--color-primario);
-  border-color: var(--color-primario);
-  border-radius: var(--radio-borde-pequeno);
-  font-weight: 700;
-  transition: all 0.3s ease;
-}
-
-.btn-primary:hover {
-  background-color: var(--color-primario-hover);
-  border-color: var(--color-primario-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
-}
-
-.btn {
-  border-radius: var(--radio-borde-pequeno);
-  font-weight: 600;
-  transition: all 0.3s ease;
-}
-
-.btn:active {
-  transform: translateY(0);
-}
-
-/* Tarjetas (Cards) */
-.card {
-  border: none;
-  border-radius: var(--radio-borde);
-  box-shadow: var(--sombra-suave);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--sombra-hover);
-}
-
-.card-header {
-  border-radius: var(--radio-borde) var(--radio-borde) 0 0 !important;
-  border-bottom: 1px solid #f1f5f9;
-  font-weight: 700;
+  background-color: var(--bg-color) !important;
+  /* Dotted grid background pattern */
+  background-image: radial-gradient(var(--dot-color) 2px, transparent 0);
+  background-size: 30px 30px;
+  background-position: -15px -15px; /* Offset to center dots */
   color: #1e293b;
 }
 
-/* Navegación */
+/* Tipografía a mano para títulos */
+h1, h2, h3, h4, h5, h6, .navbar-brand {
+  font-family: 'Caveat', cursive;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* Tarjetas tipo "Sticky Note" */
+.card {
+  background-color: #ffffff; /* Default white */
+  border: var(--border-thickness) solid var(--border-dark) !important;
+  border-radius: 2px 15px 15px 15px !important; /* Asymmetrical sticky note shape */
+  box-shadow: var(--shadow-solid) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px) translateX(-2px);
+  box-shadow: var(--shadow-solid-hover) !important;
+}
+
+.card-header {
+  background-color: transparent !important;
+  border-bottom: var(--border-thickness) solid var(--border-dark) !important;
+  font-family: 'Caveat', cursive;
+  font-size: 1.5rem;
+  padding: 1rem 1.25rem !important;
+}
+
+/* Clases de colores para las tarjetas (post-its) */
+.bg-sticky-yellow { background-color: var(--sticky-yellow) !important; }
+.bg-sticky-purple { background-color: var(--sticky-purple) !important; }
+.bg-sticky-blue { background-color: var(--sticky-blue) !important; }
+.bg-sticky-pink { background-color: var(--sticky-pink) !important; }
+.bg-sticky-green { background-color: var(--sticky-green) !important; }
+.bg-sticky-orange { background-color: var(--sticky-orange) !important; }
+
+/* Menú de navegación flotante (Toolbar) */
 .navbar {
-  box-shadow: var(--sombra-suave);
+  background-color: #ffffff !important;
+  border: var(--border-thickness) solid var(--border-dark);
+  border-radius: 12px;
+  box-shadow: var(--shadow-solid);
+  margin-top: 1rem;
+  padding: 0.5rem 1rem !important;
 }
 
 .navbar-brand {
-  font-weight: 800;
-  font-size: 1.5rem;
-  letter-spacing: -0.5px;
+  font-size: 2.2rem;
+  color: var(--border-dark) !important;
 }
 
-/* Elementos de listas / Tareas */
-.border.rounded {
-  border-radius: var(--radio-borde-pequeno) !important;
-  border-color: #e2e8f0 !important;
-  transition: all 0.2s ease;
-}
-
-.border.rounded:hover {
-  border-color: var(--color-primario) !important;
-  background-color: #f8fafc;
-}
-
-/* Badges */
-.badge {
-  border-radius: 8px;
-  padding: 0.4em 0.65em;
+.nav-link {
+  color: var(--border-dark) !important;
   font-weight: 700;
+  font-family: 'Nunito', sans-serif; /* Keep links readable */
+}
+
+.nav-link:hover {
+  color: var(--primary-btn) !important;
+}
+
+/* Botones estilo Flat / Comic */
+.btn-primary {
+  background-color: var(--primary-btn) !important;
+  border: var(--border-thickness) solid var(--border-dark) !important;
+  border-radius: 8px !important;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.15);
+  font-weight: 800;
+  color: white;
+  transition: all 0.1s ease;
+}
+
+.btn-primary:hover {
+  background-color: #7c3aed !important;
+  transform: translateY(1px) translateX(1px);
+  box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary:active {
+  transform: translateY(2px) translateX(2px);
+  box-shadow: none;
+}
+
+/* Botones outline (secundarios) */
+.btn-outline-primary {
+  color: var(--border-dark) !important;
+  background-color: #ffffff !important;
+  border: var(--border-thickness) solid var(--border-dark) !important;
+  border-radius: 8px !important;
+  font-weight: 800;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.15);
+  transition: all 0.1s ease;
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--sticky-yellow) !important;
+  transform: translateY(1px) translateX(1px);
+  box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.15);
+}
+
+/* Inputs de formulario */
+.form-control {
+  border: var(--border-thickness) solid var(--border-dark) !important;
+  border-radius: 8px !important;
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.form-control:focus {
+  border-color: var(--primary-btn) !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3) !important;
 }
