@@ -3,26 +3,26 @@
 
 {% block contenido %}
 <div class="row justify-content-center">
-  <div class="col-md-5">
+  <div class="col-lg-4 col-md-6 col-sm-8">
     <div class="card shadow-sm">
-      <div class="card-body p-4">
-        <h1 class="h4 mb-3 text-center">Entrar a Vura</h1>
+      <div class="card-body p-5">
+        <h1 class="h4 mb-4 text-center fw-bold">Entrar a Vura 🚀</h1>
         <form method="post" novalidate>
           {{ formulario.hidden_tag() }}
 
           <div class="mb-3">
-            {{ formulario.correo.label(class="form-label") }}
-            {{ formulario.correo(class="form-control") }}
+            {{ formulario.correo.label(class="form-label fw-semibold") }}
+            {{ formulario.correo(class="form-control form-control-lg") }}
             {% for error in formulario.correo.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
           </div>
 
-          <div class="mb-3">
-            {{ formulario.contrasena.label(class="form-label") }}
-            {{ formulario.contrasena(class="form-control") }}
+          <div class="mb-4">
+            {{ formulario.contrasena.label(class="form-label fw-semibold") }}
+            {{ formulario.contrasena(class="form-control form-control-lg") }}
             {% for error in formulario.contrasena.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
           </div>
 
-          {{ formulario.enviar(class="btn btn-primary w-100") }}
+          {{ formulario.enviar(class="btn btn-primary btn-lg w-100 mt-2") }}
         </form>
         <p class="text-center small mt-3 mb-0">
           ¿No tienes cuenta? <a href="{{ url_for('autenticacion.registro') }}">Regístrate</a>
