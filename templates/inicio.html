@@ -2,66 +2,14 @@
 {% block titulo %}Inicio{% endblock %}
 
 {% block contenido %}
-<div class="mb-4">
-  <h1 class="h3 mb-0">Hola, {{ current_user.nombre }} 👋</h1>
-  <p class="text-muted">Esto es lo que está pasando en tus equipos.</p>
-</div>
-
-<div class="row g-4">
-  <div class="col-md-6">
-    <div class="card bg-sticky-yellow h-100">
-      <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <strong>📝 Mis tareas pendientes</strong>
-        <span class="badge bg-secondary">{{ mis_tareas | length }}</span>
-      </div>
-      <div class="card-body p-4">
-        {% for tarea in mis_tareas %}
-          <div class="d-flex justify-content-between align-items-center border rounded p-2 mb-2">
-            <div>
-              <a href="{{ url_for('tareas.tablero', id_proyecto=tarea.id_proyecto) }}" class="fw-semibold small">
-                {{ tarea.titulo }}
-              </a>
-              <div class="text-muted small">{{ tarea.proyecto.nombre }} · {{ tarea.proyecto.equipo.nombre }}</div>
-            </div>
-            <div class="text-end">
-              {% if tarea.fecha_limite %}
-                <span class="badge bg-warning text-dark">{{ tarea.fecha_limite.strftime("%d/%m") }}</span>
-              {% endif %}
-              {% if tarea.estado == "en_progreso" %}
-                <span class="badge bg-info text-dark">En progreso</span>
-              {% endif %}
-            </div>
-          </div>
-        {% else %}
-          <p class="text-muted small text-center my-4">No tienes tareas pendientes. 🎉</p>
-        {% endfor %}
-      </div>
-    </div>
-  </div>
-
-  <div class="col-md-6">
-    <div class="card bg-sticky-purple h-100">
-      <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <strong>👥 Mis equipos</strong>
-        <a class="small" href="{{ url_for('equipos.mis_equipos') }}">Ver todos</a>
-      </div>
-      <div class="card-body p-4">
-        {% for equipo in mis_equipos %}
-          <div class="border rounded p-2 mb-2">
-            <div class="d-flex justify-content-between align-items-center">
-              <a href="{{ url_for('equipos.ver_equipo', id_equipo=equipo.id) }}" class="fw-semibold small">
-                {{ equipo.nombre }}
-              </a>
-              <span class="text-muted small">{{ equipo.miembros | length }} 👤</span>
-            </div>
-            <a class="small" href="{{ url_for('chat.sala', id_equipo=equipo.id) }}">Ir al chat</a>
-          </div>
-        {% else %}
-          <p class="text-muted small text-center my-4">
-            Aún no estás en ningún equipo.<br>
-            <a href="{{ url_for('equipos.mis_equipos') }}">Crea uno o únete con un código</a>
-          </p>
-        {% endfor %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card shadow-sm">
+      <div class="card-body text-center py-5">
+        <h1 class="card-title">Hola, {{ current_user.nombre }} 👋</h1>
+        <p class="text-muted">Tu pizarra aparecerá aquí en cuanto tengas un proyecto.</p>
+        <p class="text-muted">Crea un equipo (o únete a uno con un código) y luego crea su primer proyecto.</p>
+        <a class="btn btn-primary" href="{{ url_for('equipos.mis_equipos') }}">Mis equipos</a>
       </div>
     </div>
   </div>

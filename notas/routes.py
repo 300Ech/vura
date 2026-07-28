@@ -28,7 +28,15 @@ def ver_notas(id_proyecto):
     contenido = nota.contenido_json if nota and nota.contenido_json else "null"
     # Se escapa '<' para que un texto con '</script>' no pueda romper la etiqueta donde va incrustado el JSON.
     contenido = contenido.replace("<", "\\u003c")
-    return render_template("notas/notas.html", proyecto=proyecto, nota=nota, contenido=contenido)
+
+    # Todos los proyectos del usuario, para el selector con el que se cambia de pizarra.
+    from equipos.models import MiembroEquipo
+    ids_equipos = [m.id_equipo for m in MiembroEquipo.query.filter_by(id_usuario=current_user.id)]
+    mis_proyectos = (Proyecto.query.filter(Proyecto.id_equipo.in_(ids_equipos))
+                     .order_by(Proyecto.nombre).all())
+
+    return render_template("notas/notas.html", proyecto=proyecto, nota=nota,
+                           contenido=contenido, mis_proyectos=mis_proyectos)
 
 
 @notas.route("/proyectos/<int:id_proyecto>/notas/guardar", methods=["POST"])

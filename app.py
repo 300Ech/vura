@@ -48,19 +48,21 @@ with app.app_context():
 @app.route("/")
 @login_required
 def inicio():
+    """El inicio de Vura es la pizarra del proyecto en el que se trabajó por última vez."""
+    from flask import redirect, url_for
     from equipos.models import MiembroEquipo
     from proyectos.models import Proyecto
-    from tareas.models import Tarea
 
-    mis_equipos = [m.equipo for m in MiembroEquipo.query.filter_by(id_usuario=current_user.id)]
+    ids_equipos = [m.id_equipo for m in MiembroEquipo.query.filter_by(id_usuario=current_user.id)]
+    proyectos = (Proyecto.query.filter(Proyecto.id_equipo.in_(ids_equipos))
+                 .order_by(Proyecto.creado_en.desc()).all())
+    if not proyectos:
+        return render_template("inicio.html")
 
-    # Tareas asignadas al usuario que aún no están terminadas, con la más urgente primero.
-    mis_tareas = (Tarea.query.join(Proyecto)
-                  .filter(Tarea.id_asignado == current_user.id, Tarea.estado != "terminada")
-                  .order_by(Tarea.fecha_limite.is_(None), Tarea.fecha_limite)
-                  .limit(10).all())
-
-    return render_template("inicio.html", mis_equipos=mis_equipos, mis_tareas=mis_tareas)
+    # El proyecto cuya pizarra se editó más recientemente; si ninguna tiene nota, el más nuevo.
+    con_nota = [p for p in proyectos if p.nota]
+    elegido = max(con_nota, key=lambda p: p.nota.actualizado_en) if con_nota else proyectos[0]
+    return redirect(url_for("notas.ver_notas", id_proyecto=elegido.id))
 
 
 @app.route("/sw.js")

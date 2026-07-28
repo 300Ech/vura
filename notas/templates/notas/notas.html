@@ -47,17 +47,42 @@
   }
 </style>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <div>
-    <h1 class="h4 mb-0">Pizarra de «{{ proyecto.nombre }}»</h1>
-    <a class="text-muted small" href="{{ url_for('proyectos.ver_proyecto', id_proyecto=proyecto.id) }}">
-      Volver al proyecto
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div class="d-flex align-items-center gap-2">
+    <h1 class="h4 mb-0">Pizarra</h1>
+    {# Selector para saltar entre las pizarras de mis proyectos. #}
+    <select id="selector-proyecto" class="form-select form-select-sm" style="width: auto;">
+      {% for p in mis_proyectos %}
+        <option value="{{ url_for('notas.ver_notas', id_proyecto=p.id) }}" {% if p.id == proyecto.id %}selected{% endif %}>
+          {{ p.nombre }} · {{ p.equipo.nombre }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <span id="estado-guardado" class="text-muted small">
+      {% if nota %}Última edición: {{ nota.actualizado_en.strftime("%d/%m %H:%M") }}{% else %}Pizarra nueva{% endif %}
+    </span>
+    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('proyectos.ver_proyecto', id_proyecto=proyecto.id) }}">
+      Ver proyecto
+    </a>
+    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('tareas.tablero', id_proyecto=proyecto.id) }}">
+      Tareas
+    </a>
+    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('presentaciones.editor', id_proyecto=proyecto.id) }}">
+      Presentación
+    </a>
+    <a class="btn btn-sm btn-outline-success" href="{{ url_for('chat.sala', id_equipo=proyecto.equipo.id) }}">
+      💬 Chat
     </a>
   </div>
-  <span id="estado-guardado" class="text-muted small">
-    {% if nota %}Última edición: {{ nota.actualizado_en.strftime("%d/%m %H:%M") }}{% else %}Pizarra nueva{% endif %}
-  </span>
 </div>
+
+<script>
+  document.getElementById("selector-proyecto").addEventListener("change", (evento) => {
+    window.location.href = evento.target.value;
+  });
+</script>
 
 <div id="notas" data-id-proyecto="{{ proyecto.id }}" class="card shadow-sm">
   <div class="card-body p-2">
