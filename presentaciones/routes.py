@@ -83,6 +83,24 @@ def crear_diapositiva(id_presentacion):
     return jsonify({"id": diapositiva.id, "orden": diapositiva.orden})
 
 
+@presentaciones.route("/presentaciones/<int:id_presentacion>/orden", methods=["POST"])
+@login_required
+def guardar_orden(id_presentacion):
+    presentacion = db.get_or_404(Presentacion, id_presentacion)
+    obtener_proyecto_de_miembro(presentacion.id_proyecto)
+
+    datos = request.get_json(silent=True)
+    ids_recibidos = (datos or {}).get("orden")
+    ids_reales = {d.id for d in presentacion.diapositivas}
+    if not isinstance(ids_recibidos, list) or set(ids_recibidos) != ids_reales:
+        abort(400)
+
+    for posicion, id_diapositiva in enumerate(ids_recibidos, start=1):
+        db.session.get(Diapositiva, id_diapositiva).orden = posicion
+    db.session.commit()
+    return jsonify({"guardado": True})
+
+
 @presentaciones.route("/diapositivas/<int:id_diapositiva>/eliminar", methods=["POST"])
 @login_required
 def eliminar_diapositiva(id_diapositiva):
