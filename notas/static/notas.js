@@ -1029,3 +1029,51 @@ document.addEventListener("click", () => {
     menu.classList.remove("abierto");
   });
 });
+
+// ---- Cursores Multijugador ----
+const contenedorCursores = document.getElementById("cursores-pizarra");
+const cursores = new Map(); // idUsuario -> DOM element
+const nombreUsuarioActual = panelChat.dataset.nombreUsuario;
+
+// 1. Enviar tu posición
+let temporizadorCursor = null;
+lienzo.on("mouse:move", (evento) => {
+  const puntero = lienzo.getPointer(evento.e);
+  // Limitamos a ~20 envíos por segundo para no saturar Socket.IO
+  if (temporizadorCursor) return;
+  temporizadorCursor = setTimeout(() => {
+    socketChat.emit("mover_cursor", {
+      id_equipo: idEquipo,
+      x: puntero.x,
+      y: puntero.y
+    });
+    temporizadorCursor = null;
+  }, 50);
+});
+
+// 2. Recibir posiciones de compañeros
+socketChat.on("cursor_movido", (datos) => {
+  if (datos.id_usuario === idUsuarioActual) return;
+  
+  let cursor = cursores.get(datos.id_usuario);
+  if (!cursor) {
+    cursor = document.createElement("div");
+    cursor.className = "cursor-remoto";
+    cursor.innerHTML = `
+      <div class="cursor-remoto-icono">↖️</div>
+      <div class="cursor-remoto-nombre">${datos.nombre}</div>
+    `;
+    contenedorCursores.appendChild(cursor);
+    cursores.set(datos.id_usuario, cursor);
+  }
+  
+  // Transform es mucho más eficiente que top/left porque usa la GPU
+  cursor.style.transform = `translate(${datos.x}px, ${datos.y}px)`;
+  
+  // Si no se mueve en 3 segundos, lo borramos (probablemente salió de la pestaña)
+  clearTimeout(cursor.temporizadorLimpieza);
+  cursor.temporizadorLimpieza = setTimeout(() => {
+    cursor.remove();
+    cursores.delete(datos.id_usuario);
+  }, 3000);
+});

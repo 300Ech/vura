@@ -222,6 +222,19 @@ def escribiendo(datos):
          room=f"equipo_{id_equipo}", include_self=False)
 
 
+@socketio.on("mover_cursor")
+def mover_cursor(datos):
+    id_equipo = datos.get("id_equipo")
+    if not es_miembro_del_equipo(id_equipo):
+        return
+    emit("cursor_movido", {
+        "id_usuario": current_user.id,
+        "nombre": current_user.nombre,
+        "x": datos.get("x"),
+        "y": datos.get("y"),
+    }, room=f"equipo_{id_equipo}", include_self=False)
+
+
 # ---- Videollamada grupal en malla (WebRTC) ----
 # Socket.IO solo "presenta" a los navegadores (señalización); el audio y el video
 # viajan directo entre ellos. Cada participante se conecta con todos los demás,

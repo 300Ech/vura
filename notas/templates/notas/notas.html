@@ -23,6 +23,40 @@
     padding: 0 !important;
   }
 
+  /* Cursores Multijugador */
+  #cursores-pizarra {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 800; /* Debajo de los controles, encima de la pizarra */
+  }
+  .cursor-remoto {
+    position: absolute;
+    pointer-events: none;
+    transition: transform 0.1s linear;
+    transform-origin: top left;
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    will-change: transform;
+  }
+  .cursor-remoto-icono {
+    font-size: 1.2rem;
+    transform: rotate(-15deg);
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+  }
+  .cursor-remoto-nombre {
+    background: var(--primary-btn, #8b5cf6);
+    color: white;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 999px;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+    white-space: nowrap;
+  }
+
   #zona-pizarra {
     position: relative;
     overflow: auto;
@@ -478,7 +512,7 @@
 </div>
 
 {# Panel de chat sobre la pizarra: chateás sin dejar de ver los post-its. #}
-<div id="panel-chat" data-id-equipo="{{ proyecto.equipo.id }}" data-id-usuario="{{ current_user.id }}">
+<div id="panel-chat" data-id-equipo="{{ proyecto.equipo.id }}" data-id-usuario="{{ current_user.id }}" data-nombre-usuario="{{ current_user.nombre }}">
   <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
     <strong>💬 {{ proyecto.equipo.nombre }}</strong>
     <button id="boton-cerrar-chat" type="button" class="btn-close"></button>
@@ -513,6 +547,7 @@
 <div id="notas" data-id-proyecto="{{ proyecto.id }}" class="card shadow-sm">
   <div class="card-body p-2">
     <div id="zona-pizarra">
+      <div id="cursores-pizarra"></div>
       <canvas id="lienzo-pizarra" width="1600" height="1000"></canvas>
       <div id="menu-pizarra">
         <div id="reacciones-postit">
