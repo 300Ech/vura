@@ -11,3 +11,5 @@ class Config:
     SECRET_KEY = os.environ.get("VURA_SECRET_KEY", "clave-de-desarrollo-cambiar-en-produccion")
     SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(RUTA_DATOS, "vura.db")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # Suficiente para videos cortos de la pizarra (máximo 25 MB).
+    MAX_CONTENT_LENGTH = 30 * 1024 * 1024

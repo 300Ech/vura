@@ -48,24 +48,61 @@
   /* Menú inferior flotante y centrado, estilo FigJam. */
   #menu-pizarra {
     position: sticky;
-    bottom: 12px;
+    bottom: 16px;
     display: flex;
     justify-content: center;
     pointer-events: none;
+    z-index: 900;
   }
   #menu-pizarra .barra {
     pointer-events: auto;
     display: flex;
-    align-items: center;
-    gap: 8px;
+    align-items: flex-end;
+    gap: 4px;
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
-    padding: 8px 12px;
+    border-radius: 16px;
+    box-shadow: var(--shadow-solid, 4px 4px 0 rgba(0,0,0,0.15));
+    border: var(--border-thickness, 2px) solid var(--border-dark, #1e293b);
+    padding: 10px 14px;
+  }
+  .herramienta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 58px;
+    border: none;
+    background: transparent;
+    border-radius: 10px;
+    padding: 6px 4px 4px;
+    cursor: pointer;
+    color: #1e293b;
+    font-family: inherit;
+  }
+  .herramienta:hover { background: #f8fafc; }
+  .herramienta.active,
+  .herramienta.grabando {
+    background: #0f172a;
+    color: white;
+  }
+  .herramienta.grabando { background: #dc2626; }
+  .herramienta .icono { font-size: 1.25rem; line-height: 1; }
+  .herramienta .etiqueta {
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1.1;
+    text-align: center;
+  }
+  .herramienta.peligro:hover { background: #fee2e2; color: #b91c1c; }
+  .separador-menu {
+    width: 2px;
+    align-self: stretch;
+    background: #e2e8f0;
+    margin: 0 6px;
   }
   .muestra-color {
-    width: 26px;
-    height: 26px;
+    width: 22px;
+    height: 22px;
     border-radius: 6px;
     border: 2px solid transparent;
     padding: 0;
@@ -73,10 +110,43 @@
   .muestra-color.activa {
     border-color: #212529;
   }
-  #boton-lapiz.active {
-    background: #212529;
-    color: white;
+  .paleta-colores {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 0 4px;
   }
+  .paleta-colores .fila-colores {
+    display: flex;
+    gap: 4px;
+  }
+  .paleta-colores .etiqueta {
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #64748b;
+  }
+  /* Reproductor flotante para videos (doble clic en la tarjeta). */
+  #reproductor-medio {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.72);
+    z-index: 2500;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+  }
+  #reproductor-medio.abierto { display: flex; }
+  #reproductor-medio .caja {
+    background: white;
+    border: 2px solid #1e293b;
+    border-radius: 12px;
+    padding: 12px;
+    max-width: 90vw;
+    box-shadow: 6px 6px 0 rgba(0,0,0,0.2);
+  }
+  #reproductor-medio video { max-width: min(860px, 86vw); max-height: 70vh; display: block; }
   /* Dock lateral: los accesos del proyecto siempre a mano, estilo FigJam. */
   #dock-pizarra {
     position: fixed;
@@ -187,19 +257,69 @@
       <canvas id="lienzo-pizarra" width="1600" height="1000"></canvas>
       <div id="menu-pizarra">
         <div class="barra">
-          <button id="boton-postit" class="btn btn-sm btn-outline-primary" type="button" title="Post-it (o doble clic en la pizarra)">🗒️ Post-it</button>
-          <button class="muestra-color activa" type="button" data-color="#fde047" style="background: #fde047" title="Amarillo"></button>
-          <button class="muestra-color" type="button" data-color="#f9a8d4" style="background: #f9a8d4" title="Rosa"></button>
-          <button class="muestra-color" type="button" data-color="#86efac" style="background: #86efac" title="Verde"></button>
-          <button class="muestra-color" type="button" data-color="#93c5fd" style="background: #93c5fd" title="Celeste"></button>
-          <button class="muestra-color" type="button" data-color="#d8b4fe" style="background: #d8b4fe" title="Morado"></button>
-          <span class="vr"></span>
-          <button id="boton-texto-suelto" class="btn btn-sm btn-outline-primary" type="button">Texto</button>
-          <button id="boton-lapiz" class="btn btn-sm btn-outline-secondary" type="button">✏️ Lápiz</button>
-          <button id="boton-borrar-objeto" class="btn btn-sm btn-outline-danger" type="button">Borrar</button>
+          <button id="boton-postit" class="herramienta" type="button" title="Post-it (o doble clic en vacío)">
+            <span class="icono">🗒️</span>
+            <span class="etiqueta">Post-it</span>
+          </button>
+          <button id="boton-texto-suelto" class="herramienta" type="button">
+            <span class="icono">T</span>
+            <span class="etiqueta">Texto</span>
+          </button>
+          <button id="boton-lapiz" class="herramienta" type="button">
+            <span class="icono">✏️</span>
+            <span class="etiqueta">Lápiz</span>
+          </button>
+
+          <div class="separador-menu"></div>
+
+          <button id="boton-voz-it" class="herramienta" type="button" title="Grabar una nota de voz">
+            <span class="icono">🎙️</span>
+            <span class="etiqueta">Voz-it</span>
+          </button>
+          <button id="boton-foto" class="herramienta" type="button" title="Pegar una foto tipo Polaroid">
+            <span class="icono">📷</span>
+            <span class="etiqueta">Foto</span>
+          </button>
+          <button id="boton-video" class="herramienta" type="button" title="Pegar un video corto">
+            <span class="icono">🎬</span>
+            <span class="etiqueta">Video</span>
+          </button>
+
+          <div class="separador-menu"></div>
+
+          <div class="paleta-colores">
+            <div class="fila-colores">
+              <button class="muestra-color activa" type="button" data-color="#fde047" style="background: #fde047" title="Amarillo"></button>
+              <button class="muestra-color" type="button" data-color="#f9a8d4" style="background: #f9a8d4" title="Rosa"></button>
+              <button class="muestra-color" type="button" data-color="#86efac" style="background: #86efac" title="Verde"></button>
+              <button class="muestra-color" type="button" data-color="#93c5fd" style="background: #93c5fd" title="Celeste"></button>
+              <button class="muestra-color" type="button" data-color="#d8b4fe" style="background: #d8b4fe" title="Morado"></button>
+            </div>
+            <span class="etiqueta">Color</span>
+          </div>
+
+          <div class="separador-menu"></div>
+
+          <button id="boton-borrar-objeto" class="herramienta peligro" type="button">
+            <span class="icono">🗑️</span>
+            <span class="etiqueta">Borrar</span>
+          </button>
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<input id="entrada-foto" type="file" accept="image/*" class="d-none">
+<input id="entrada-video" type="file" accept="video/mp4,video/webm" class="d-none">
+
+<div id="reproductor-medio">
+  <div class="caja">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <strong id="titulo-reproductor">Video</strong>
+      <button id="cerrar-reproductor" type="button" class="btn-close"></button>
+    </div>
+    <video id="video-reproductor" controls></video>
   </div>
 </div>
 
