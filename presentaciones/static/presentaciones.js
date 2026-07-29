@@ -25,15 +25,23 @@ const lienzo = new fabric.Canvas("lienzo", {
   selection: true,
 });
 
-// En pantallas chicas el lienzo se ve a escala, sin cambiar sus 960×540 reales.
+// El lienzo siempre conserva sus 960×540 reales; sólo escalamos su vista.
 const marcoLienzo = document.querySelector(".marco-lienzo");
+const contenedorLienzoEscalado = document.getElementById("contenedor-lienzo-escalado");
+const porcentajeZoom = document.getElementById("porcentaje-zoom");
+let escalaEditor = 1;
+let zoomAjustado = true;
+
 function ajustarEscalaEditor() {
-  if (!marcoLienzo) return;
-  const padre = marcoLienzo.parentElement;
-  const escala = Math.min(1, (padre.clientWidth - 8) / ANCHO);
+  if (!marcoLienzo || !contenedorLienzoEscalado) return;
+  const padre = contenedorLienzoEscalado.parentElement;
+  if (zoomAjustado) escalaEditor = Math.min(1, (padre.clientWidth - 16) / ANCHO);
+  const escala = Math.max(0.25, Math.min(2, escalaEditor));
   marcoLienzo.style.transformOrigin = "top left";
   marcoLienzo.style.transform = `scale(${escala})`;
-  padre.style.height = `${ALTO * escala + 8}px`;
+  contenedorLienzoEscalado.style.width = `${ANCHO * escala}px`;
+  contenedorLienzoEscalado.style.height = `${ALTO * escala}px`;
+  if (porcentajeZoom) porcentajeZoom.textContent = `${Math.round(escala * 100)}%`;
 }
 ajustarEscalaEditor();
 
@@ -44,6 +52,16 @@ let cargandoDiapositiva = false;
 let temporizadorGuardado = null;
 let hayCambiosSinGuardar = false;
 let colorAcento = "#8b5cf6";
+
+// Propiedades propias que también deben viajar al servidor/Yjs.
+const PROPS_EXTRA = [
+  "vuraBloqueado", "lockMovementX", "lockMovementY",
+  "lockScalingX", "lockScalingY", "lockRotation", "hasControls",
+];
+
+function serializarLienzo() {
+  return lienzo.toJSON(PROPS_EXTRA);
+}
 
 // ---- Documento compartido ----
 
@@ -177,18 +195,21 @@ function cargarDiapositiva(indice) {
       selectorFondo.value = rgbAHex(lienzo.backgroundColor) || "#ffffff";
       detectarTemaAplicado();
       cargandoDiapositiva = false;
+      sincronizarHistorialAlCargar();
     });
   } else {
     lienzo.renderAll();
     selectorFondo.value = "#ffffff";
     temaAplicado = TEMAS[0];
     cargandoDiapositiva = false;
+    sincronizarHistorialAlCargar();
   }
   dibujarPanel();
 }
 
 function programarGuardado() {
   if (cargandoDiapositiva) return;
+  programarHistorial();
   hayCambiosSinGuardar = true;
   indicadorEstado.textContent = "Cambios sin guardar...";
   indicadorEstado.className = "text-warning small";
@@ -200,7 +221,7 @@ async function guardarAhora() {
   if (!hayCambiosSinGuardar) return;
   clearTimeout(temporizadorGuardado);
   const diapositiva = diapositivas[indiceActual];
-  diapositiva.contenido = lienzo.toJSON();
+  diapositiva.contenido = serializarLienzo();
   publicarDiapositiva(diapositiva);
   generarMiniatura(diapositiva);
 
@@ -225,6 +246,103 @@ async function guardarAhora() {
 lienzo.on("object:added", programarGuardado);
 lienzo.on("object:modified", programarGuardado);
 lienzo.on("object:removed", programarGuardado);
+
+// ---- Deshacer / rehacer ----
+// Cada diapositiva guarda su propia lista corta de estados. Registramos los
+// cambios con una pausa para que insertar una plantilla cuente como UN paso.
+
+const historiales = new Map(); // id diapositiva -> { estados: [JSON], indice }
+let temporizadorHistorial = null;
+let aplicandoHistorial = false;
+
+function claveEstadoActual() {
+  return JSON.stringify(serializarLienzo());
+}
+
+function historialActual() {
+  const diapositiva = diapositivas[indiceActual];
+  if (!diapositiva) return null;
+  if (!historiales.has(diapositiva.id)) {
+    historiales.set(diapositiva.id, { estados: [claveEstadoActual()], indice: 0 });
+  }
+  return historiales.get(diapositiva.id);
+}
+
+function actualizarBotonesHistorial() {
+  const h = historialActual();
+  document.getElementById("boton-deshacer").disabled = !h || h.indice <= 0;
+  document.getElementById("boton-rehacer").disabled = !h || h.indice >= h.estados.length - 1;
+}
+
+function registrarEstadoAhora() {
+  if (cargandoDiapositiva || aplicandoHistorial) return;
+  const h = historialActual();
+  if (!h) return;
+  const estado = claveEstadoActual();
+  if (h.estados[h.indice] === estado) return;
+  h.estados = h.estados.slice(0, h.indice + 1);
+  h.estados.push(estado);
+  // 40 pasos son suficientes y evitan guardar megas durante una sesión larga.
+  if (h.estados.length > 40) h.estados.shift();
+  h.indice = h.estados.length - 1;
+  actualizarBotonesHistorial();
+}
+
+function programarHistorial() {
+  if (cargandoDiapositiva || aplicandoHistorial) return;
+  clearTimeout(temporizadorHistorial);
+  temporizadorHistorial = setTimeout(registrarEstadoAhora, 120);
+}
+
+function sincronizarHistorialAlCargar() {
+  const diapositiva = diapositivas[indiceActual];
+  if (!diapositiva || aplicandoHistorial) return;
+  const estado = claveEstadoActual();
+  const h = historiales.get(diapositiva.id);
+  if (!h) {
+    historiales.set(diapositiva.id, { estados: [estado], indice: 0 });
+  } else if (h.estados[h.indice] !== estado) {
+    h.estados = h.estados.slice(0, h.indice + 1);
+    h.estados.push(estado);
+    h.indice = h.estados.length - 1;
+  }
+  actualizarBotonesHistorial();
+}
+
+function aplicarEstadoHistorial(estado) {
+  aplicandoHistorial = true;
+  cargandoDiapositiva = true;
+  lienzo.loadFromJSON(JSON.parse(estado), () => {
+    lienzo.renderAll();
+    detectarTemaAplicado();
+    selectorFondo.value = rgbAHex(lienzo.backgroundColor) || "#ffffff";
+    cargandoDiapositiva = false;
+    aplicandoHistorial = false;
+    hayCambiosSinGuardar = true;
+    programarGuardado();
+    actualizarBotonesHistorial();
+  });
+}
+
+function deshacer() {
+  clearTimeout(temporizadorHistorial);
+  registrarEstadoAhora();
+  const h = historialActual();
+  if (!h || h.indice <= 0) return;
+  h.indice -= 1;
+  aplicarEstadoHistorial(h.estados[h.indice]);
+}
+
+function rehacer() {
+  clearTimeout(temporizadorHistorial);
+  const h = historialActual();
+  if (!h || h.indice >= h.estados.length - 1) return;
+  h.indice += 1;
+  aplicarEstadoHistorial(h.estados[h.indice]);
+}
+
+document.getElementById("boton-deshacer").addEventListener("click", deshacer);
+document.getElementById("boton-rehacer").addEventListener("click", rehacer);
 
 // ---- Guías de alineación con "imán" (snap) ----
 // Al mover un objeto, si un borde o su centro se acerca al centro del lienzo,
@@ -826,15 +944,149 @@ function eliminarSeleccion() {
 
 document.getElementById("boton-eliminar-objeto").addEventListener("click", eliminarSeleccion);
 
+// ---- Duplicar, copiar, pegar y bloquear ----
+
+let portapapelesObjetos = null;
+
+function clonarSeleccion(alClonar) {
+  const seleccionado = lienzo.getActiveObject();
+  if (!seleccionado) return;
+  seleccionado.clone(alClonar, PROPS_EXTRA);
+}
+
+function pegarClon(clon) {
+  clon.clone((pegado) => {
+    lienzo.discardActiveObject();
+    pegado.set({
+      left: (pegado.left || 0) + 18,
+      top: (pegado.top || 0) + 18,
+      evented: true,
+    });
+    if (pegado.type === "activeSelection") {
+      pegado.canvas = lienzo;
+      pegado.forEachObject((objeto) => lienzo.add(objeto));
+      pegado.setCoords();
+    } else {
+      lienzo.add(pegado);
+    }
+    lienzo.setActiveObject(pegado);
+    lienzo.requestRenderAll();
+    programarHistorial();
+  }, PROPS_EXTRA);
+}
+
+function copiarSeleccion() {
+  clonarSeleccion((clon) => {
+    portapapelesObjetos = clon;
+  });
+}
+
+function pegarSeleccion() {
+  if (portapapelesObjetos) pegarClon(portapapelesObjetos);
+}
+
+function duplicarSeleccion() {
+  clonarSeleccion((clon) => pegarClon(clon));
+}
+
+function bloquearSeleccion() {
+  const objetos = lienzo.getActiveObjects();
+  if (!objetos.length) return;
+  const bloquear = !objetos.every((objeto) => objeto.vuraBloqueado);
+  objetos.forEach((objeto) => {
+    objeto.set({
+      vuraBloqueado: bloquear,
+      lockMovementX: bloquear,
+      lockMovementY: bloquear,
+      lockScalingX: bloquear,
+      lockScalingY: bloquear,
+      lockRotation: bloquear,
+      hasControls: !bloquear,
+    });
+  });
+  lienzo.requestRenderAll();
+  programarGuardado();
+  programarHistorial();
+  actualizarBotonBloqueo();
+}
+
+function actualizarBotonBloqueo() {
+  const boton = document.getElementById("boton-bloquear");
+  const objetos = lienzo.getActiveObjects();
+  const bloqueados = objetos.length && objetos.every((objeto) => objeto.vuraBloqueado);
+  boton.textContent = bloqueados ? "🔒 Desbloquear" : "🔓 Bloquear";
+  boton.disabled = !objetos.length;
+}
+
+document.getElementById("boton-duplicar-objeto").addEventListener("click", duplicarSeleccion);
+document.getElementById("boton-bloquear").addEventListener("click", bloquearSeleccion);
+lienzo.on("selection:created", actualizarBotonBloqueo);
+lienzo.on("selection:updated", actualizarBotonBloqueo);
+lienzo.on("selection:cleared", actualizarBotonBloqueo);
+actualizarBotonBloqueo();
+
+// ---- Atajos de teclado ----
+
 document.addEventListener("keydown", (evento) => {
   if (presentando) return;
-  if (evento.key !== "Delete" && evento.key !== "Backspace") return;
   const objeto = lienzo.getActiveObject();
   const escribiendo = (objeto && objeto.isEditing)
     || ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName);
-  if (objeto && !escribiendo) {
+  if (escribiendo) return;
+
+  const modificador = evento.ctrlKey || evento.metaKey;
+  const tecla = evento.key.toLowerCase();
+
+  if (modificador && tecla === "z") {
+    evento.preventDefault();
+    if (evento.shiftKey) rehacer();
+    else deshacer();
+    return;
+  }
+  if (modificador && tecla === "y") {
+    evento.preventDefault();
+    rehacer();
+    return;
+  }
+  if (modificador && tecla === "c" && objeto) {
+    evento.preventDefault();
+    copiarSeleccion();
+    return;
+  }
+  if (modificador && tecla === "v" && portapapelesObjetos) {
+    evento.preventDefault();
+    pegarSeleccion();
+    return;
+  }
+  if (modificador && tecla === "d" && objeto) {
+    evento.preventDefault();
+    duplicarSeleccion();
+    return;
+  }
+  if ((evento.key === "Delete" || evento.key === "Backspace") && objeto) {
     evento.preventDefault();
     eliminarSeleccion();
+    return;
+  }
+  if (evento.key === "Escape" && objeto) {
+    lienzo.discardActiveObject();
+    lienzo.requestRenderAll();
+    return;
+  }
+
+  // Las flechas mueven 1 px; con Shift, 10 px.
+  if (objeto && !lienzo.getActiveObjects().some((item) => item.vuraBloqueado)
+      && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(evento.key)) {
+    evento.preventDefault();
+    const paso = evento.shiftKey ? 10 : 1;
+    if (evento.key === "ArrowLeft") objeto.left -= paso;
+    if (evento.key === "ArrowRight") objeto.left += paso;
+    if (evento.key === "ArrowUp") objeto.top -= paso;
+    if (evento.key === "ArrowDown") objeto.top += paso;
+    objeto.setCoords();
+    lienzo.requestRenderAll();
+    programarGuardado();
+    programarHistorial();
   }
 });
 
@@ -860,7 +1112,7 @@ document.getElementById("boton-duplicar-diapositiva").addEventListener("click", 
   await guardarAhora();
   const nueva = await crearDiapositivaEnServidor();
   if (!nueva) return;
-  const copia = { id: nueva.id, contenido: lienzo.toJSON() };
+  const copia = { id: nueva.id, contenido: serializarLienzo() };
   diapositivas.splice(indiceActual + 1, 0, copia);
   publicarDiapositiva(copia);
   publicarOrden();
@@ -885,6 +1137,23 @@ function moverDiapositiva(desplazamiento) {
 
 document.getElementById("boton-mover-izquierda").addEventListener("click", () => moverDiapositiva(-1));
 document.getElementById("boton-mover-derecha").addEventListener("click", () => moverDiapositiva(1));
+
+// ---- Zoom de la vista del editor ----
+// Sólo cambia cómo se ve el lienzo; las posiciones reales y la exportación
+// siguen siendo 960×540.
+
+function cambiarZoom(delta) {
+  zoomAjustado = false;
+  escalaEditor = Math.max(0.25, Math.min(2, escalaEditor + delta));
+  ajustarEscalaEditor();
+}
+
+document.getElementById("boton-zoom-menos").addEventListener("click", () => cambiarZoom(-0.1));
+document.getElementById("boton-zoom-mas").addEventListener("click", () => cambiarZoom(0.1));
+document.getElementById("boton-zoom-ajustar").addEventListener("click", () => {
+  zoomAjustado = true;
+  ajustarEscalaEditor();
+});
 
 document.getElementById("boton-borrar-diapositiva").addEventListener("click", async () => {
   if (diapositivas.length <= 1) {
