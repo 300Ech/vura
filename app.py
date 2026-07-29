@@ -41,9 +41,32 @@ app.register_blueprint(exportacion)
 
 socketio.init_app(app)
 
+def asegurar_columnas():
+    """Agrega columnas nuevas a tablas ya existentes (mini-migración para SQLite).
+
+    db.create_all() sólo crea tablas que faltan, no columnas nuevas. Cuando
+    añadimos un campo a un modelo, aquí lo agregamos con ALTER TABLE si no está.
+    """
+    from sqlalchemy import inspect, text
+
+    columnas_esperadas = {
+        "diapositivas": {"notas": "TEXT"},
+    }
+    inspector = inspect(db.engine)
+    for tabla, columnas in columnas_esperadas.items():
+        if not inspector.has_table(tabla):
+            continue
+        existentes = {c["name"] for c in inspector.get_columns(tabla)}
+        for nombre, tipo in columnas.items():
+            if nombre not in existentes:
+                db.session.execute(text(f"ALTER TABLE {tabla} ADD COLUMN {nombre} {tipo}"))
+    db.session.commit()
+
+
 # Crea automáticamente las tablas que falten la primera vez que arranca la aplicación.
 with app.app_context():
     db.create_all()
+    asegurar_columnas()
 
 
 @app.route("/")

@@ -40,7 +40,9 @@ def editor(id_proyecto):
         db.session.commit()
 
     diapositivas = [
-        {"id": d.id, "orden": d.orden, "contenido": json.loads(d.contenido_json) if d.contenido_json else None}
+        {"id": d.id, "orden": d.orden,
+         "contenido": json.loads(d.contenido_json) if d.contenido_json else None,
+         "notas": d.notas or ""}
         for d in presentacion.diapositivas
     ]
     # Se escapa '<' para que un texto con '</script>' no pueda romper la etiqueta donde va incrustado el JSON.
@@ -64,6 +66,8 @@ def guardar_diapositiva(id_diapositiva):
         abort(413)
 
     diapositiva.contenido_json = contenido
+    if "notas" in datos and isinstance(datos["notas"], str):
+        diapositiva.notas = datos["notas"][:5000]
     diapositiva.actualizado_por = current_user.id
     db.session.commit()
 

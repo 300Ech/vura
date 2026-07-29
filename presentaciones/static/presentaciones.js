@@ -45,8 +45,10 @@ function ajustarEscalaEditor() {
 }
 ajustarEscalaEditor();
 
-// diapositivas = [{ id, contenido }] en el orden actual.
-let diapositivas = diapositivasIniciales.map((d) => ({ id: d.id, contenido: d.contenido }));
+// diapositivas = [{ id, contenido, notas }] en el orden actual.
+let diapositivas = diapositivasIniciales.map((d) => ({
+  id: d.id, contenido: d.contenido, notas: d.notas || "",
+}));
 let indiceActual = 0;
 let cargandoDiapositiva = false;
 let temporizadorGuardado = null;
@@ -183,9 +185,12 @@ function dibujarPanel() {
 
 // ---- Cargar y guardar ----
 
+const campoNotas = document.getElementById("campo-notas");
+
 function cargarDiapositiva(indice) {
   cargandoDiapositiva = true;
   indiceActual = indice;
+  if (campoNotas) campoNotas.value = diapositivas[indice].notas || "";
   const contenido = diapositivas[indice].contenido;
   lienzo.clear();
   lienzo.backgroundColor = "#ffffff";
@@ -196,6 +201,7 @@ function cargarDiapositiva(indice) {
       detectarTemaAplicado();
       cargandoDiapositiva = false;
       sincronizarHistorialAlCargar();
+      actualizarEstadoVacio();
     });
   } else {
     lienzo.renderAll();
@@ -203,6 +209,7 @@ function cargarDiapositiva(indice) {
     temaAplicado = TEMAS[0];
     cargandoDiapositiva = false;
     sincronizarHistorialAlCargar();
+    actualizarEstadoVacio();
   }
   dibujarPanel();
 }
@@ -229,7 +236,7 @@ async function guardarAhora() {
     const respuesta = await fetch(`/diapositivas/${diapositiva.id}/guardar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contenido: diapositiva.contenido }),
+      body: JSON.stringify({ contenido: diapositiva.contenido, notas: diapositiva.notas || "" }),
     });
     if (!respuesta.ok) throw new Error("Error del servidor");
     const datos = await respuesta.json();
@@ -243,9 +250,39 @@ async function guardarAhora() {
   }
 }
 
+// ---- Estado vacío (onboarding de diapositiva en blanco) ----
+
+const estadoVacio = document.getElementById("estado-vacio");
+
+function actualizarEstadoVacio() {
+  if (!estadoVacio) return;
+  estadoVacio.classList.toggle("d-none", lienzo.getObjects().length > 0);
+}
+
+lienzo.on("object:added", actualizarEstadoVacio);
+lienzo.on("object:removed", actualizarEstadoVacio);
+
+const botonVacioPlantillas = document.getElementById("boton-vacio-plantillas");
+if (botonVacioPlantillas) {
+  botonVacioPlantillas.addEventListener("click", () => document.getElementById("boton-plantillas").click());
+}
+
 lienzo.on("object:added", programarGuardado);
 lienzo.on("object:modified", programarGuardado);
 lienzo.on("object:removed", programarGuardado);
+
+// Notas del presentador: se guardan igual que el resto (sin tocar el historial de deshacer).
+if (campoNotas) {
+  campoNotas.addEventListener("input", () => {
+    if (cargandoDiapositiva) return;
+    diapositivas[indiceActual].notas = campoNotas.value;
+    hayCambiosSinGuardar = true;
+    indicadorEstado.textContent = "Cambios sin guardar...";
+    indicadorEstado.className = "text-warning small";
+    clearTimeout(temporizadorGuardado);
+    temporizadorGuardado = setTimeout(guardarAhora, 2000);
+  });
+}
 
 // ---- Deshacer / rehacer ----
 // Cada diapositiva guarda su propia lista corta de estados. Registramos los
@@ -1020,10 +1057,49 @@ function actualizarBotonBloqueo() {
 
 document.getElementById("boton-duplicar-objeto").addEventListener("click", duplicarSeleccion);
 document.getElementById("boton-bloquear").addEventListener("click", bloquearSeleccion);
-lienzo.on("selection:created", actualizarBotonBloqueo);
-lienzo.on("selection:updated", actualizarBotonBloqueo);
-lienzo.on("selection:cleared", actualizarBotonBloqueo);
-actualizarBotonBloqueo();
+
+// ---- Panel de estilo contextual ----
+// Muestra sólo los controles que sirven para lo que está seleccionado.
+
+const pistaSeleccion = document.getElementById("pista-seleccion");
+const controlesTexto = document.querySelector(".estilo-texto");
+const controlesObjeto = document.querySelector(".estilo-objeto");
+const botonNegrita = document.getElementById("boton-negrita");
+const botonCursiva = document.getElementById("boton-cursiva");
+
+function actualizarEstiloContextual() {
+  const objeto = lienzo.getActiveObject();
+  const hayObjeto = !!objeto;
+  const esTextoSel = esTexto(objeto);
+
+  pistaSeleccion.classList.toggle("d-none", hayObjeto);
+  controlesObjeto.classList.toggle("d-none", !hayObjeto);
+  controlesTexto.classList.toggle("d-none", !esTextoSel);
+
+  if (esTextoSel) {
+    // Sincroniza los controles con el texto elegido.
+    if (objeto.fontFamily) selectorFuente.value = objeto.fontFamily;
+    if (objeto.fontSize) selectorTamano.value = String(Math.round(objeto.fontSize));
+    botonNegrita.classList.toggle("active", objeto.fontWeight === "bold");
+    botonCursiva.classList.toggle("active", objeto.fontStyle === "italic");
+  }
+  if (hayObjeto) {
+    const color = objeto.fill || objeto.stroke;
+    if (typeof color === "string" && /^#[0-9a-fA-F]{6}$/.test(color)) {
+      document.getElementById("selector-color").value = color;
+    }
+  }
+}
+
+function alCambiarSeleccion() {
+  actualizarBotonBloqueo();
+  actualizarEstiloContextual();
+}
+
+lienzo.on("selection:created", alCambiarSeleccion);
+lienzo.on("selection:updated", alCambiarSeleccion);
+lienzo.on("selection:cleared", alCambiarSeleccion);
+alCambiarSeleccion();
 
 // ---- Atajos de teclado ----
 
@@ -1089,6 +1165,69 @@ document.addEventListener("keydown", (evento) => {
     programarHistorial();
   }
 });
+
+// ---- Menú de clic derecho ----
+
+const menuContextual = document.getElementById("menu-contextual");
+
+function traerAlFrente() {
+  const objeto = lienzo.getActiveObject();
+  if (!objeto) return;
+  lienzo.bringToFront(objeto);
+  lienzo.renderAll();
+  programarGuardado();
+}
+
+function enviarAtras() {
+  const objeto = lienzo.getActiveObject();
+  if (!objeto) return;
+  lienzo.sendToBack(objeto);
+  lienzo.renderAll();
+  programarGuardado();
+}
+
+function cerrarMenuContextual() {
+  menuContextual.classList.remove("abierto");
+}
+
+// El lienzo de Fabric dispara su propio evento de clic derecho.
+lienzo.on("mouse:down", (evento) => {
+  if (evento.e.button !== 2) return; // sólo botón derecho
+  evento.e.preventDefault();
+  const objeto = evento.target;
+  if (!objeto) {
+    cerrarMenuContextual();
+    return;
+  }
+  if (lienzo.getActiveObject() !== objeto) lienzo.setActiveObject(objeto);
+  lienzo.renderAll();
+  menuContextual.style.left = evento.e.clientX + "px";
+  menuContextual.style.top = evento.e.clientY + "px";
+  menuContextual.classList.add("abierto");
+  actualizarBotonBloqueo();
+});
+
+// Evita el menú del navegador sobre el área del lienzo.
+document.querySelector(".marco-lienzo").addEventListener("contextmenu", (e) => e.preventDefault());
+
+menuContextual.addEventListener("click", (evento) => {
+  const accion = evento.target.dataset.accion;
+  if (!accion) return;
+  if (accion === "duplicar") duplicarSeleccion();
+  else if (accion === "copiar") copiarSeleccion();
+  else if (accion === "bloquear") bloquearSeleccion();
+  else if (accion === "frente") traerAlFrente();
+  else if (accion === "atras") enviarAtras();
+  else if (accion === "borrar") eliminarSeleccion();
+  cerrarMenuContextual();
+});
+
+document.addEventListener("mousedown", (evento) => {
+  // El clic derecho es el que ABRE el menú; sólo cerramos con otros clics.
+  if (evento.button === 2) return;
+  if (!menuContextual.contains(evento.target)) cerrarMenuContextual();
+});
+window.addEventListener("scroll", cerrarMenuContextual, true);
 
 // ---- Gestión de diapositivas ----
 
@@ -1199,6 +1338,23 @@ function actualizarProgreso() {
   barraProgreso.style.width = porcentaje + "%";
 }
 
+const notasPresentacion = document.getElementById("notas-presentacion");
+const relojPresentacion = document.getElementById("reloj-presentacion");
+let notasVisibles = false;
+let saltoTecleado = ""; // número que se va escribiendo para saltar de diapositiva
+let temporizadorReloj = null;
+let segundosPresentando = 0;
+
+function actualizarReloj() {
+  const minutos = String(Math.floor(segundosPresentando / 60)).padStart(2, "0");
+  const segundos = String(segundosPresentando % 60).padStart(2, "0");
+  relojPresentacion.textContent = `⏱ ${minutos}:${segundos}`;
+}
+
+function mostrarNotasActuales() {
+  notasPresentacion.textContent = diapositivas[indicePresentacion].notas || "";
+}
+
 function mostrarDiapositivaPresentacion(indice) {
   // Fade corto: oculta, carga, muestra.
   canvasPresentacion.classList.add("ocultando");
@@ -1210,6 +1366,7 @@ function mostrarDiapositivaPresentacion(indice) {
     const terminar = () => {
       lienzoPresentacion.renderAll();
       actualizarProgreso();
+      mostrarNotasActuales();
       canvasPresentacion.classList.remove("ocultando");
     };
     if (contenido) {
@@ -1226,6 +1383,10 @@ document.getElementById("boton-presentar").addEventListener("click", async () =>
   capaPresentacion.classList.add("activo");
   ajustarTamanoPresentacion();
   mostrarDiapositivaPresentacion(indiceActual);
+  segundosPresentando = 0;
+  actualizarReloj();
+  clearInterval(temporizadorReloj);
+  temporizadorReloj = setInterval(() => { segundosPresentando += 1; actualizarReloj(); }, 1000);
   if (capaPresentacion.requestFullscreen) {
     capaPresentacion.requestFullscreen().catch(() => {});
   }
@@ -1235,11 +1396,36 @@ function salirDePresentacion() {
   presentando = false;
   capaPresentacion.classList.remove("activo");
   canvasPresentacion.classList.remove("ocultando");
+  clearInterval(temporizadorReloj);
   if (document.fullscreenElement) document.exitFullscreen();
+}
+
+function alternarNotasPresentacion() {
+  notasVisibles = !notasVisibles;
+  notasPresentacion.classList.toggle("oculto", !notasVisibles);
+}
+
+function intentarSalto() {
+  const numero = Number(saltoTecleado);
+  saltoTecleado = "";
+  if (numero >= 1 && numero <= diapositivas.length) {
+    mostrarDiapositivaPresentacion(numero - 1);
+  }
 }
 
 document.addEventListener("keydown", (evento) => {
   if (!presentando) return;
+  if (evento.key >= "0" && evento.key <= "9") {
+    // Se van juntando los dígitos; Enter confirma el salto.
+    saltoTecleado = (saltoTecleado + evento.key).slice(-3);
+    return;
+  }
+  if (evento.key === "Enter") {
+    evento.preventDefault();
+    intentarSalto();
+    return;
+  }
+  saltoTecleado = "";
   if (evento.key === "ArrowRight" || evento.key === " " || evento.key === "PageDown") {
     evento.preventDefault();
     if (indicePresentacion < diapositivas.length - 1) mostrarDiapositivaPresentacion(indicePresentacion + 1);
@@ -1250,6 +1436,8 @@ document.addEventListener("keydown", (evento) => {
     mostrarDiapositivaPresentacion(0);
   } else if (evento.key === "End") {
     mostrarDiapositivaPresentacion(diapositivas.length - 1);
+  } else if (evento.key === "n" || evento.key === "N") {
+    alternarNotasPresentacion();
   } else if (evento.key === "Escape") {
     salirDePresentacion();
   }

@@ -1,3 +1,5 @@
+import base64
+import binascii
 import io
 import json
 import re
@@ -18,7 +20,8 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from pptx import Presentation as ArchivoPptx
 from pptx.util import Emu, Pt
 from pptx.dml.color import RGBColor
-from pptx.enum.shapes import MSO_SHAPE
+from pptx.enum.shapes import MSO_SHAPE, MSO_CONNECTOR
+from pptx.enum.text import PP_ALIGN
 
 exportacion = Blueprint("exportacion", __name__)
 
@@ -140,6 +143,25 @@ def color_desde_hex(texto):
     return RGBColor(0, 0, 0)
 
 
+ALINEACIONES = {
+    "left": PP_ALIGN.LEFT,
+    "center": PP_ALIGN.CENTER,
+    "right": PP_ALIGN.RIGHT,
+    "justify": PP_ALIGN.JUSTIFY,
+}
+
+
+def imagen_desde_data_url(src):
+    """Devuelve los bytes de una imagen subida (data:image/...;base64,....) o None."""
+    if not isinstance(src, str) or not src.startswith("data:image"):
+        return None
+    try:
+        _, datos = src.split(",", 1)
+        return io.BytesIO(base64.b64decode(datos))
+    except (ValueError, binascii.Error):
+        return None
+
+
 def agregar_objeto_fabric(diapositiva_pptx, objeto):
     """Traduce un objeto de Fabric.js (texto, rectángulo o círculo) a una forma de PowerPoint."""
     tipo = objeto.get("type", "")
@@ -152,12 +174,46 @@ def agregar_objeto_fabric(diapositiva_pptx, objeto):
         ancho = Emu(int(max(objeto.get("width", 200), 10) * escala_x * EMU_POR_PIXEL))
         alto = Emu(int(max(objeto.get("height", 50), 10) * escala_y * EMU_POR_PIXEL))
         caja = diapositiva_pptx.shapes.add_textbox(izquierda, arriba, ancho, alto)
-        parrafo = caja.text_frame.paragraphs[0]
-        parrafo.text = objeto.get("text", "")
-        parrafo.font.size = Pt(objeto.get("fontSize", 32) * escala_y * 0.75)  # px -> pt
-        parrafo.font.bold = objeto.get("fontWeight") == "bold"
-        parrafo.font.italic = objeto.get("fontStyle") == "italic"
-        parrafo.font.color.rgb = color_desde_hex(objeto.get("fill"))
+        marco = caja.text_frame
+        marco.word_wrap = True
+        # Un párrafo por línea, para respetar los saltos de línea del texto.
+        lineas = (objeto.get("text", "") or "").split("\n")
+        for indice, linea in enumerate(lineas):
+            parrafo = marco.paragraphs[0] if indice == 0 else marco.add_paragraph()
+            parrafo.text = linea
+            parrafo.alignment = ALINEACIONES.get(objeto.get("textAlign"), PP_ALIGN.LEFT)
+            fuente = parrafo.font
+            fuente.size = Pt(objeto.get("fontSize", 32) * escala_y * 0.75)  # px -> pt
+            fuente.bold = objeto.get("fontWeight") == "bold"
+            fuente.italic = objeto.get("fontStyle") == "italic"
+            fuente.color.rgb = color_desde_hex(objeto.get("fill"))
+            nombre_fuente = objeto.get("fontFamily")
+            if isinstance(nombre_fuente, str):
+                fuente.name = nombre_fuente
+        return
+
+    if tipo == "image":
+        datos_imagen = imagen_desde_data_url(objeto.get("src"))
+        if datos_imagen is None:
+            return  # imágenes por URL externa no se pueden incrustar sin descargarlas
+        ancho = Emu(int(objeto.get("width", 100) * escala_x * EMU_POR_PIXEL))
+        alto = Emu(int(objeto.get("height", 100) * escala_y * EMU_POR_PIXEL))
+        try:
+            diapositiva_pptx.shapes.add_picture(datos_imagen, izquierda, arriba, ancho, alto)
+        except Exception:
+            pass  # formato no soportado por PowerPoint: mejor omitir que romper el archivo
+        return
+
+    if tipo == "line":
+        ancho = int(objeto.get("width", 100) * escala_x * EMU_POR_PIXEL)
+        alto = int(objeto.get("height", 0) * escala_y * EMU_POR_PIXEL)
+        conector = diapositiva_pptx.shapes.add_connector(
+            MSO_CONNECTOR.STRAIGHT, izquierda, arriba,
+            Emu(int(objeto.get("left", 0) * EMU_POR_PIXEL) + ancho),
+            Emu(int(objeto.get("top", 0) * EMU_POR_PIXEL) + alto),
+        )
+        conector.line.color.rgb = color_desde_hex(objeto.get("stroke"))
+        conector.line.width = Pt(max(objeto.get("strokeWidth", 3), 1))
         return
 
     if tipo == "group":

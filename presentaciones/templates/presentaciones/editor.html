@@ -106,6 +106,39 @@
     padding-bottom: 8px;
     border-bottom: 1px solid #e2e8f0;
   }
+  /* Menú de clic derecho */
+  .menu-contextual {
+    position: fixed;
+    z-index: 3000;
+    display: none;
+    list-style: none;
+    margin: 0;
+    padding: 6px;
+    min-width: 190px;
+    background: white;
+    border: 2px solid var(--border-dark, #1e293b);
+    border-radius: 12px;
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.15);
+  }
+  .menu-contextual.abierto { display: block; }
+  .menu-contextual li {
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .menu-contextual li:hover { background: #f1f5f9; }
+  .menu-contextual li.peligro { color: #b91c1c; }
+  .menu-contextual li.peligro:hover { background: #fee2e2; }
+  .menu-contextual .separador {
+    height: 1px;
+    padding: 0;
+    margin: 5px 6px;
+    background: #e2e8f0;
+    cursor: default;
+  }
+  .menu-contextual .separador:hover { background: #e2e8f0; }
   #panel-diapositivas {
     width: 180px;
     max-height: 72vh;
@@ -168,7 +201,28 @@
     border-radius: 4px;
     box-shadow: 6px 6px 0 rgba(0,0,0,0.12);
     overflow: hidden;
+    position: relative;
   }
+  .estado-vacio {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    pointer-events: none; /* el lienzo sigue recibiendo clics; sólo el botón no */
+    background: repeating-linear-gradient(
+      45deg, transparent, transparent 22px,
+      rgba(148, 163, 184, 0.06) 22px, rgba(148, 163, 184, 0.06) 44px);
+  }
+  .estado-vacio-caja {
+    pointer-events: auto;
+    max-width: 460px;
+    padding: 24px 28px;
+  }
+  .estado-vacio-emoji { font-size: 3rem; }
+  .estado-vacio-titulo { font-size: 1.6rem; font-weight: 800; margin: 4px 0; color: #334155; }
+  .estado-vacio-texto { color: #64748b; margin-bottom: 14px; }
   #contenedor-lienzo-escalado {
     position: relative;
     width: 960px;
@@ -214,6 +268,37 @@
     left: 24px;
     color: #64748b;
     font-size: 0.85rem;
+  }
+  #reloj-presentacion {
+    position: absolute;
+    top: 18px;
+    right: 24px;
+    color: #94a3b8;
+    font-size: 0.95rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  #notas-presentacion {
+    position: absolute;
+    left: 24px;
+    bottom: 48px;
+    max-width: 620px;
+    max-height: 40vh;
+    overflow-y: auto;
+    padding: 14px 18px;
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid #334155;
+    border-radius: 12px;
+    color: #f1f5f9;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+  #notas-presentacion.oculto { display: none; }
+  #notas-presentacion:empty::before {
+    content: "Esta diapositiva no tiene notas.";
+    color: #94a3b8;
+    font-style: italic;
   }
 
   @media (max-width: 768px) {
@@ -328,38 +413,50 @@
 
     <div class="grupo-herramientas">
       <span class="etiqueta-grupo">Estilo</span>
-      <select id="selector-fuente" class="form-select form-select-sm" style="width: auto;" title="Fuente">
-        <option value="Nunito" selected>Nunito</option>
-        <option value="Poppins">Poppins</option>
-        <option value="Caveat">Caveat</option>
-        <option value="Arial">Arial</option>
-        <option value="Georgia">Georgia</option>
-      </select>
-      <select id="selector-tamano" class="form-select form-select-sm" style="width: auto;" title="Tamaño">
-        <option value="20">20</option>
-        <option value="28" selected>28</option>
-        <option value="36">36</option>
-        <option value="48">48</option>
-        <option value="64">64</option>
-        <option value="80">80</option>
-      </select>
-      <button id="boton-negrita" class="btn btn-sm btn-outline-secondary" type="button" title="Negrita"><strong>B</strong></button>
-      <button id="boton-cursiva" class="btn btn-sm btn-outline-secondary" type="button" title="Cursiva"><em>I</em></button>
-      <button id="boton-alinear-izq" class="btn btn-sm btn-outline-secondary" type="button" title="Alinear izquierda">⫷</button>
-      <button id="boton-alinear-centro" class="btn btn-sm btn-outline-secondary" type="button" title="Centrar">☰</button>
-      <button id="boton-alinear-der" class="btn btn-sm btn-outline-secondary" type="button" title="Alinear derecha">⫸</button>
-      <label class="d-flex align-items-center gap-1 small mb-0" title="Color del objeto">
-        Color
-        <input id="selector-color" type="color" value="#1e293b" class="form-control form-control-color">
-      </label>
+
+      <span id="pista-seleccion" class="text-muted small">👆 Seleccioná un objeto para darle estilo</span>
+
+      {# Controles que sólo aplican a textos #}
+      <span class="estilo estilo-texto d-none">
+        <select id="selector-fuente" class="form-select form-select-sm" style="width: auto;" title="Fuente">
+          <option value="Nunito" selected>Nunito</option>
+          <option value="Poppins">Poppins</option>
+          <option value="Caveat">Caveat</option>
+          <option value="Arial">Arial</option>
+          <option value="Georgia">Georgia</option>
+        </select>
+        <select id="selector-tamano" class="form-select form-select-sm" style="width: auto;" title="Tamaño">
+          <option value="20">20</option>
+          <option value="28" selected>28</option>
+          <option value="36">36</option>
+          <option value="48">48</option>
+          <option value="64">64</option>
+          <option value="80">80</option>
+        </select>
+        <button id="boton-negrita" class="btn btn-sm btn-outline-secondary" type="button" title="Negrita"><strong>B</strong></button>
+        <button id="boton-cursiva" class="btn btn-sm btn-outline-secondary" type="button" title="Cursiva"><em>I</em></button>
+        <button id="boton-alinear-izq" class="btn btn-sm btn-outline-secondary" type="button" title="Alinear izquierda">⫷</button>
+        <button id="boton-alinear-centro" class="btn btn-sm btn-outline-secondary" type="button" title="Centrar">☰</button>
+        <button id="boton-alinear-der" class="btn btn-sm btn-outline-secondary" type="button" title="Alinear derecha">⫸</button>
+      </span>
+
+      {# Controles que aplican a cualquier objeto seleccionado #}
+      <span class="estilo estilo-objeto d-none">
+        <label class="d-flex align-items-center gap-1 small mb-0" title="Color del objeto">
+          Color
+          <input id="selector-color" type="color" value="#1e293b" class="form-control form-control-color">
+        </label>
+        <span class="vr mx-1"></span>
+        <button id="boton-adelante" class="btn btn-sm btn-outline-secondary" type="button" title="Traer al frente">↑</button>
+        <button id="boton-atras" class="btn btn-sm btn-outline-secondary" type="button" title="Enviar atrás">↓</button>
+        <button id="boton-eliminar-objeto" class="btn btn-sm btn-outline-danger" type="button">Borrar</button>
+      </span>
+
+      {# El fondo siempre está disponible: es de la diapositiva, no del objeto #}
       <label class="d-flex align-items-center gap-1 small mb-0" title="Fondo de la diapositiva">
         Fondo
         <input id="selector-fondo" type="color" value="#ffffff" class="form-control form-control-color">
       </label>
-      <span class="vr mx-1"></span>
-      <button id="boton-adelante" class="btn btn-sm btn-outline-secondary" type="button" title="Traer al frente">↑</button>
-      <button id="boton-atras" class="btn btn-sm btn-outline-secondary" type="button" title="Enviar atrás">↓</button>
-      <button id="boton-eliminar-objeto" class="btn btn-sm btn-outline-danger" type="button">Borrar</button>
     </div>
   </div>
 
@@ -371,6 +468,14 @@
         <div id="contenedor-lienzo-escalado">
           <div class="marco-lienzo">
             <canvas id="lienzo" width="960" height="540"></canvas>
+            <div id="estado-vacio" class="estado-vacio d-none">
+              <div class="estado-vacio-caja">
+                <div class="estado-vacio-emoji">🪄</div>
+                <p class="estado-vacio-titulo">Diapositiva en blanco</p>
+                <p class="estado-vacio-texto">Empezá con una plantilla lista o agregá texto, formas e imágenes desde la barra de arriba.</p>
+                <button id="boton-vacio-plantillas" class="btn btn-sm btn-primary" type="button">🎨 Elegir una plantilla</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -386,9 +491,29 @@
         <button id="boton-zoom-mas" class="btn btn-sm btn-outline-secondary" type="button" title="Acercar">+</button>
         <button id="boton-zoom-ajustar" class="btn btn-sm btn-outline-secondary" type="button" title="Ajustar a la ventana">Ajustar</button>
       </div>
+
+      <div class="caja-notas mt-3">
+        <label for="campo-notas" class="etiqueta-grupo d-block mb-1">
+          🎤 Notas del presentador
+          <span class="text-muted fw-normal">(sólo las ves vos, no salen en la presentación)</span>
+        </label>
+        <textarea id="campo-notas" class="form-control" rows="2"
+                  placeholder="Apuntá aquí lo que vas a decir en esta diapositiva..."></textarea>
+      </div>
     </div>
   </div>
 </div>
+
+<ul id="menu-contextual" class="menu-contextual">
+  <li data-accion="duplicar">⧉ Duplicar</li>
+  <li data-accion="copiar">⎘ Copiar</li>
+  <li data-accion="bloquear">🔒 Bloquear / desbloquear</li>
+  <li class="separador"></li>
+  <li data-accion="frente">↑ Traer al frente</li>
+  <li data-accion="atras">↓ Enviar atrás</li>
+  <li class="separador"></li>
+  <li data-accion="borrar" class="peligro">🗑️ Borrar</li>
+</ul>
 
 <div class="modal fade" id="modal-plantillas" tabindex="-1">
   <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -434,8 +559,10 @@
 <div id="modo-presentacion">
   <canvas id="lienzo-presentacion" width="960" height="540"></canvas>
   <div id="barra-progreso-presentacion"></div>
-  <span id="ayuda-presentacion">← → espacio · Esc salir</span>
+  <span id="ayuda-presentacion">← → espacio · N notas · número + Enter salta · Esc salir</span>
   <span id="contador-presentacion"></span>
+  <span id="reloj-presentacion"></span>
+  <div id="notas-presentacion" class="oculto"></div>
 </div>
 
 <script id="datos-diapositivas" type="application/json">{{ datos_diapositivas | safe }}</script>

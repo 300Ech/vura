@@ -25,6 +25,7 @@ class Diapositiva(db.Model):
     id_presentacion = db.Column(db.Integer, db.ForeignKey("presentaciones.id"), nullable=False)
     orden = db.Column(db.Integer, nullable=False, default=1)
     contenido_json = db.Column(db.Text, nullable=True)  # JSON que exporta Fabric.js
+    notas = db.Column(db.Text, nullable=True)  # apuntes del presentador para esta diapositiva
     actualizado_en = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc),
                                onupdate=lambda: datetime.now(timezone.utc))
     actualizado_por = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=True)
