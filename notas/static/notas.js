@@ -793,8 +793,15 @@ socketChat.on("usuario_escribiendo", (datos) => {
   setTimeout(() => { avisoEscribiendoPanel.textContent = ""; }, 3000);
 });
 
+// El campo crece con el texto (hasta el máximo que marca el CSS).
+function ajustarAltoCampoPanel() {
+  textoChatPanel.style.height = "auto";
+  textoChatPanel.style.height = textoChatPanel.scrollHeight + "px";
+}
+
 let ultimoAvisoEscribiendo = 0;
 textoChatPanel.addEventListener("input", () => {
+  ajustarAltoCampoPanel();
   const ahora = Date.now();
   if (ahora - ultimoAvisoEscribiendo > 2000) {
     ultimoAvisoEscribiendo = ahora;
@@ -802,12 +809,23 @@ textoChatPanel.addEventListener("input", () => {
   }
 });
 
-document.getElementById("formulario-chat-panel").addEventListener("submit", (evento) => {
+const formularioChatPanel = document.getElementById("formulario-chat-panel");
+
+// Enter envía; Shift+Enter hace un salto de línea.
+textoChatPanel.addEventListener("keydown", (evento) => {
+  if (evento.key === "Enter" && !evento.shiftKey) {
+    evento.preventDefault();
+    formularioChatPanel.requestSubmit();
+  }
+});
+
+formularioChatPanel.addEventListener("submit", (evento) => {
   evento.preventDefault();
   const texto = textoChatPanel.value.trim();
   if (!texto) return;
   socketChat.emit("enviar_mensaje", { id_equipo: idEquipo, texto: texto });
   textoChatPanel.value = "";
+  ajustarAltoCampoPanel();
   textoChatPanel.focus();
 });
 
@@ -819,6 +837,7 @@ document.getElementById("boton-emojis-panel").addEventListener("click", () => {
 document.querySelectorAll(".emoji-panel").forEach((boton) => {
   boton.addEventListener("click", () => {
     textoChatPanel.value += boton.textContent;
+    ajustarAltoCampoPanel();
     textoChatPanel.focus();
   });
 });
@@ -907,16 +926,16 @@ function agregarMensajePanel(mensaje) {
   datosMensajesPanel.set(mensaje.id, mensaje);
   const esMio = mensaje.id_usuario === idUsuarioActual;
   const burbuja = document.createElement("div");
-  burbuja.className = "p-2 rounded mb-2 small " + (esMio ? "bg-primary text-white ms-auto" : "bg-white border");
-  burbuja.style.maxWidth = "85%";
+  burbuja.className = "burbuja-panel small" + (esMio ? " mia" : "");
 
   const encabezado = document.createElement("div");
   encabezado.className = "small " + (esMio ? "text-white-50" : "text-muted");
-  encabezado.textContent = mensaje.nombre + " · " + mensaje.hora;
+  encabezado.textContent = (esMio ? "Tú" : mensaje.nombre) + " · " + mensaje.hora;
   burbuja.appendChild(encabezado);
 
   if (mensaje.texto) {
     const cuerpo = document.createElement("div");
+    cuerpo.className = "texto-panel";
     cuerpo.textContent = mensaje.texto;
     burbuja.appendChild(cuerpo);
   }

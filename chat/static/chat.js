@@ -41,11 +41,26 @@ socket.on("reacciones_mensaje", (datos) => {
 let ultimoAvisoEnviado = 0;
 let temporizadorAviso = null;
 
+// El campo crece con el texto (hasta el máximo que marca el CSS).
+function ajustarAltoCampo() {
+  campoTexto.style.height = "auto";
+  campoTexto.style.height = campoTexto.scrollHeight + "px";
+}
+
 campoTexto.addEventListener("input", () => {
+  ajustarAltoCampo();
   const ahora = Date.now();
   if (ahora - ultimoAvisoEnviado > 2000) {
     ultimoAvisoEnviado = ahora;
     socket.emit("escribiendo", { id_equipo: idEquipo });
+  }
+});
+
+// Enter envía; Shift+Enter hace un salto de línea.
+campoTexto.addEventListener("keydown", (evento) => {
+  if (evento.key === "Enter" && !evento.shiftKey) {
+    evento.preventDefault();
+    formularioMensaje.requestSubmit();
   }
 });
 
@@ -63,6 +78,7 @@ formularioMensaje.addEventListener("submit", (evento) => {
   if (!texto) return;
   socket.emit("enviar_mensaje", { id_equipo: idEquipo, texto: texto });
   campoTexto.value = "";
+  ajustarAltoCampo();
   campoTexto.focus();
 });
 
@@ -75,6 +91,7 @@ document.getElementById("boton-emojis-chat").addEventListener("click", () => {
 document.querySelectorAll(".emoji-chat").forEach((boton) => {
   boton.addEventListener("click", () => {
     campoTexto.value += boton.textContent;
+    ajustarAltoCampo();
     campoTexto.focus();
   });
 });
@@ -160,23 +177,44 @@ botonVoz.addEventListener("click", async () => {
 
 // ---- Dibujo de mensajes y reacciones ----
 
+// Colores de avatar: siempre el mismo para la misma persona.
+const COLORES_AVATAR = ["#fde047", "#f9a8d4", "#86efac", "#93c5fd", "#d8b4fe", "#fdba74"];
+let autorAnterior = null;
+
 function agregarMensaje(mensaje) {
   mensaje.reacciones ||= { totales: {}, mias: [] };
   mensajes.set(mensaje.id, mensaje);
 
   const esMio = mensaje.id_usuario === idUsuarioActual;
-  const burbuja = document.createElement("div");
-  burbuja.id = "mensaje-" + mensaje.id;
-  burbuja.className = "burbuja-chat p-2 rounded mb-2 "
-    + (esMio ? "bg-primary text-white ms-auto" : "bg-white border");
+  const seguido = autorAnterior === mensaje.id_usuario;
+  autorAnterior = mensaje.id_usuario;
 
-  const encabezado = document.createElement("div");
-  encabezado.className = "small " + (esMio ? "text-white-50" : "text-muted");
-  encabezado.textContent = mensaje.nombre + " · " + mensaje.hora;
-  burbuja.appendChild(encabezado);
+  const linea = document.createElement("div");
+  linea.id = "mensaje-" + mensaje.id;
+  linea.className = "linea-mensaje " + (esMio ? "mia" : "suya") + (seguido ? " seguido" : "");
+
+  const avatar = document.createElement("div");
+  avatar.className = "avatar-chat";
+  avatar.style.background = COLORES_AVATAR[mensaje.id_usuario % COLORES_AVATAR.length];
+  avatar.textContent = (mensaje.nombre || "?").charAt(0).toUpperCase();
+  linea.appendChild(avatar);
+
+  const grupo = document.createElement("div");
+  grupo.className = "grupo-burbuja";
+  linea.appendChild(grupo);
+
+  const nombre = document.createElement("div");
+  nombre.className = "nombre-chat";
+  nombre.textContent = esMio ? "Tú" : mensaje.nombre;
+  grupo.appendChild(nombre);
+
+  const burbuja = document.createElement("div");
+  burbuja.className = "burbuja-chat";
+  grupo.appendChild(burbuja);
 
   if (mensaje.texto) {
     const cuerpo = document.createElement("div");
+    cuerpo.className = "texto-chat";
     cuerpo.textContent = mensaje.texto;
     burbuja.appendChild(cuerpo);
   }
@@ -197,6 +235,11 @@ function agregarMensaje(mensaje) {
     burbuja.appendChild(audio);
   }
 
+  const hora = document.createElement("div");
+  hora.className = "hora-chat";
+  hora.textContent = mensaje.hora;
+  burbuja.appendChild(hora);
+
   const reacciones = document.createElement("div");
   reacciones.className = "reacciones-chat";
   reacciones.id = "reacciones-" + mensaje.id;
@@ -210,7 +253,7 @@ function agregarMensaje(mensaje) {
   botonAgregar.type = "button";
   botonAgregar.className = "boton-agregar-reaccion";
   botonAgregar.title = "Agregar reacción";
-  botonAgregar.textContent = "😊+";
+  botonAgregar.textContent = "😊 +";
 
   const menu = document.createElement("div");
   menu.className = "menu-reacciones";
@@ -241,9 +284,9 @@ function agregarMensaje(mensaje) {
 
   filaAcciones.appendChild(botonAgregar);
   filaAcciones.appendChild(menu);
-  burbuja.appendChild(filaAcciones);
+  grupo.appendChild(filaAcciones);
 
-  listaMensajes.appendChild(burbuja);
+  listaMensajes.appendChild(linea);
   dibujarReacciones(mensaje);
   listaMensajes.scrollTop = listaMensajes.scrollHeight;
 }

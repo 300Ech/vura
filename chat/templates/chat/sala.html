@@ -3,14 +3,81 @@
 
 {% block contenido %}
 <style>
-  .burbuja-chat { position: relative; max-width: 75%; }
+  /* ---- Burbujas ---- */
+  .linea-mensaje {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    max-width: 78%;
+    margin-bottom: 10px;
+    animation: aparecer-burbuja .18s ease-out;
+  }
+  .linea-mensaje.mia { flex-direction: row-reverse; margin-left: auto; }
+  /* Mensajes seguidos del mismo autor: se ven como un bloque. */
+  .linea-mensaje.seguido { margin-top: -6px; }
+  .linea-mensaje.seguido .avatar-chat { visibility: hidden; }
+  .linea-mensaje.seguido .nombre-chat { display: none; }
+
+  @keyframes aparecer-burbuja {
+    from { opacity: 0; transform: translateY(6px); }
+  }
+
+  .avatar-chat {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: var(--border-thickness) solid var(--border-dark);
+    box-shadow: 2px 2px 0 rgba(0,0,0,.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: #1e293b;
+  }
+
+  .grupo-burbuja { min-width: 0; }
+  .nombre-chat {
+    font-size: .72rem;
+    font-weight: 800;
+    color: #64748b;
+    margin: 0 6px 2px;
+  }
+  .linea-mensaje.mia .nombre-chat { text-align: right; }
+
+  .burbuja-chat {
+    position: relative;
+    padding: 8px 12px;
+    background: white;
+    border: var(--border-thickness) solid var(--border-dark);
+    /* Esquinita "mordida" del lado de quien habla, como bocadillo. */
+    border-radius: 16px 16px 16px 4px;
+    box-shadow: 3px 3px 0 rgba(0,0,0,.12);
+  }
+  .linea-mensaje.mia .burbuja-chat {
+    background: var(--primary-btn);
+    color: white;
+    border-radius: 16px 16px 4px 16px;
+  }
+  .texto-chat {
+    /* Respeta los saltos de línea y parte las palabras larguísimas. */
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .hora-chat { font-size: .68rem; opacity: .65; margin-top: 2px; text-align: right; }
+
   .imagen-chat {
     display: block;
     max-width: 320px;
     max-height: 260px;
-    border-radius: 8px;
+    border-radius: 10px;
+    border: 2px solid rgba(30,41,59,.25);
     cursor: zoom-in;
   }
+  .burbuja-chat audio { max-width: 250px; }
+
+  /* ---- Reacciones ---- */
   .reacciones-chat { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
   .reaccion-chat {
     border: 1px solid #cbd5e1;
@@ -18,23 +85,25 @@
     background: white;
     padding: 1px 7px;
     font-size: 0.8rem;
+    color: #1e293b;
   }
   .reaccion-chat.mia { background: #ede9fe; border-color: #8b5cf6; }
   .acciones-reaccion {
     position: relative;
-    display: inline-flex;
-    margin-top: 4px;
+    display: flex;
+    margin: 3px 4px 0;
   }
+  .linea-mensaje.mia .acciones-reaccion { justify-content: flex-end; }
   .boton-agregar-reaccion {
-    border: 1px solid #cbd5e1;
+    border: 1px dashed #94a3b8;
     border-radius: 999px;
     background: white;
-    padding: 0 7px;
-    font-size: 0.78rem;
-    line-height: 1.5;
-    color: #1e293b;
+    padding: 0 8px;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    color: #64748b;
   }
-  .boton-agregar-reaccion:hover { background: #f1f5f9; }
+  .boton-agregar-reaccion:hover { background: #f1f5f9; border-style: solid; }
   .menu-reacciones {
     display: none;
     position: absolute;
@@ -48,11 +117,24 @@
     padding: 4px 8px;
     z-index: 5;
   }
+  .linea-mensaje.mia .menu-reacciones { left: auto; right: 0; }
   .menu-reacciones.abierto { display: flex; }
   .menu-reacciones button { border: 0; background: transparent; padding: 1px 3px; font-size: 1.05rem; }
   .menu-reacciones button:hover { background: #f1f5f9; border-radius: 6px; }
+
+  /* ---- Barra de escritura ---- */
+  #campo-texto {
+    resize: none;
+    overflow-y: auto;
+    max-height: 130px;
+    border-radius: 14px;
+    line-height: 1.35;
+  }
+  #formulario-mensaje { align-items: flex-end; }
+  #formulario-mensaje .btn { border-radius: 12px; }
   #selector-emojis-chat { display: none; }
-  #selector-emojis-chat.abierto { display: flex; }
+  #selector-emojis-chat.abierto { display: flex; flex-wrap: wrap; }
+
   #visor-imagen-chat {
     position: fixed; inset: 0; z-index: 2500; display: none;
     justify-content: center; align-items: center;
@@ -88,8 +170,9 @@
       <button id="boton-emojis-chat" class="btn btn-outline-secondary" type="button" title="Emojis">😊</button>
       <button id="boton-imagen-chat" class="btn btn-outline-secondary" type="button" title="Adjuntar imagen">📷</button>
       <button id="boton-voz-chat" class="btn btn-outline-secondary" type="button" title="Grabar Voz-it">🎙️</button>
-      <input id="campo-texto" class="form-control" maxlength="1000"
-             placeholder="Escribe un mensaje..." autofocus>
+      {# Textarea (no input) para que crezca solo con los mensajes largos. #}
+      <textarea id="campo-texto" class="form-control" maxlength="1000" rows="1"
+                placeholder="Escribe un mensaje... (Enter envía)" autofocus></textarea>
       <button class="btn btn-primary" type="submit">Enviar</button>
     </form>
     <input id="entrada-imagen-chat" type="file" accept="image/*" class="d-none">

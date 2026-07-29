@@ -262,6 +262,32 @@
     flex-direction: column;
     background: var(--bg-color, #f3f4f6);
   }
+  #panel-chat .burbuja-panel {
+    max-width: 88%;
+    padding: 7px 10px;
+    margin-bottom: 8px;
+    background: white;
+    border: var(--border-thickness, 2px) solid var(--border-dark, #1e293b);
+    border-radius: 14px 14px 14px 4px;
+    box-shadow: 2px 2px 0 rgba(0,0,0,.12);
+  }
+  #panel-chat .burbuja-panel.mia {
+    background: var(--primary-btn, #8b5cf6);
+    color: white;
+    margin-left: auto;
+    border-radius: 14px 14px 4px 14px;
+  }
+  #panel-chat .texto-panel {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  #panel-chat #texto-chat-panel {
+    resize: none;
+    overflow-y: auto;
+    max-height: 110px;
+    border-radius: 12px;
+  }
+  #panel-chat #formulario-chat-panel { align-items: flex-end; }
   #panel-chat .imagen-chat-panel {
     display: block;
     max-width: 230px;
@@ -281,6 +307,7 @@
     background: white;
     padding: 1px 6px;
     font-size: .72rem;
+    color: #1e293b;
   }
   #panel-chat .reaccion-panel.mia { background: #ede9fe; border-color: #8b5cf6; }
   #panel-chat .acciones-reaccion-panel {
@@ -385,7 +412,9 @@
       <button id="boton-emojis-panel" class="btn btn-sm btn-outline-secondary" type="button" title="Emojis">😊</button>
       <button id="boton-imagen-panel" class="btn btn-sm btn-outline-secondary" type="button" title="Imagen">📷</button>
       <button id="boton-voz-panel" class="btn btn-sm btn-outline-secondary" type="button" title="Voz-it">🎙️</button>
-      <input id="texto-chat-panel" class="form-control form-control-sm" maxlength="1000" placeholder="Mensaje...">
+      {# Textarea (no input) para que crezca solo con los mensajes largos. #}
+      <textarea id="texto-chat-panel" class="form-control form-control-sm" maxlength="1000"
+                rows="1" placeholder="Mensaje..."></textarea>
       <button class="btn btn-sm btn-primary" type="submit">Enviar</button>
     </form>
     <input id="entrada-imagen-panel" type="file" accept="image/*" class="d-none">
