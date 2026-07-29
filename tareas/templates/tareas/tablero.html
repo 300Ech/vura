@@ -16,6 +16,33 @@
 </div>
 
 <style>
+  .columna-tareas {
+    min-height: 120px;
+    transition: background-color 0.15s ease, outline-color 0.15s ease;
+  }
+  .columna-tareas.destino-arrastre {
+    background: rgba(139, 92, 246, 0.1);
+    outline: 2px dashed #8b5cf6;
+    outline-offset: -5px;
+  }
+  .tarjeta-tarea {
+    cursor: grab;
+    touch-action: pan-y;
+  }
+  .tarjeta-tarea:active { cursor: grabbing; }
+  .tarjeta-tarea.arrastrando {
+    opacity: 0.35;
+    transform: rotate(1deg);
+  }
+  .asa-tarea {
+    color: #64748b;
+    cursor: grab;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 2px;
+    touch-action: none;
+    user-select: none;
+  }
   @media (max-width: 768px) {
     /* Tablero: columnas en fila con scroll horizontal (estilo Trello móvil). */
     .tablero-movil {
@@ -48,7 +75,7 @@
           <span id="contador-{{ estado }}" class="badge bg-secondary">{{ lista | length }}</span>
         </div>
         {# El contenido inicial lo renderiza el servidor; tareas.js lo redibuja desde el documento Yjs. #}
-        <div id="columna-{{ estado }}" class="card-body p-2">
+        <div id="columna-{{ estado }}" class="card-body p-2 columna-tareas" data-estado="{{ estado }}">
           {% for tarea in lista %}
             <div class="card bg-sticky-yellow mb-3 tilt-left cursor-pointer">
               <div class="card-body p-3">

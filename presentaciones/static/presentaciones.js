@@ -138,6 +138,7 @@ const lienzoMiniaturas = new fabric.StaticCanvas(document.createElement("canvas"
   width: ANCHO, height: ALTO,
 });
 let colaMiniaturas = Promise.resolve();
+let idDiapositivaArrastrada = null;
 
 function generarMiniatura(diapositiva) {
   colaMiniaturas = colaMiniaturas.then(() => new Promise((listo) => {
@@ -166,20 +167,115 @@ function dibujarPanel() {
     const boton = document.createElement("button");
     boton.type = "button";
     boton.className = "miniatura" + (indice === indiceActual ? " activa" : "");
+    boton.draggable = true;
+    boton.dataset.idDiapositiva = diapositiva.id;
+    boton.title = "Arrastrá para reordenar";
 
     const imagen = document.createElement("img");
     imagen.alt = "Diapositiva " + (indice + 1);
     if (miniaturas.has(diapositiva.id)) imagen.src = miniaturas.get(diapositiva.id);
     const numero = document.createElement("span");
     numero.className = "numero";
-    numero.textContent = "Diapositiva " + (indice + 1);
+    numero.textContent = "⠿ Diapositiva " + (indice + 1);
+    configurarArrastreTactilDiapositiva(numero, boton, diapositiva.id);
 
     boton.append(imagen, numero);
     boton.addEventListener("click", async () => {
+      if (boton.classList.contains("fue-arrastrada")) return;
       await guardarAhora();
       cargarDiapositiva(indice);
     });
+    boton.addEventListener("dragstart", (evento) => {
+      guardarAhora();
+      idDiapositivaArrastrada = diapositiva.id;
+      evento.dataTransfer.effectAllowed = "move";
+      evento.dataTransfer.setData("text/plain", String(diapositiva.id));
+      requestAnimationFrame(() => boton.classList.add("arrastrando"));
+    });
+    boton.addEventListener("dragover", (evento) => {
+      evento.preventDefault();
+      evento.dataTransfer.dropEffect = "move";
+      const caja = boton.getBoundingClientRect();
+      const horizontal = panelDiapositivas.scrollWidth > panelDiapositivas.clientWidth;
+      const despues = horizontal
+        ? evento.clientX > caja.left + caja.width / 2
+        : evento.clientY > caja.top + caja.height / 2;
+      boton.classList.toggle("soltar-despues", despues);
+      boton.classList.toggle("soltar-antes", !despues);
+    });
+    boton.addEventListener("dragleave", () => {
+      boton.classList.remove("soltar-antes", "soltar-despues");
+    });
+    boton.addEventListener("drop", (evento) => {
+      evento.preventDefault();
+      const caja = boton.getBoundingClientRect();
+      const horizontal = panelDiapositivas.scrollWidth > panelDiapositivas.clientWidth;
+      const despues = horizontal
+        ? evento.clientX > caja.left + caja.width / 2
+        : evento.clientY > caja.top + caja.height / 2;
+      reordenarDiapositivaArrastrada(diapositiva.id, despues);
+    });
+    boton.addEventListener("dragend", () => {
+      boton.classList.remove("arrastrando", "soltar-antes", "soltar-despues");
+      boton.classList.add("fue-arrastrada");
+      setTimeout(() => boton.classList.remove("fue-arrastrada"), 0);
+      idDiapositivaArrastrada = null;
+    });
     panelDiapositivas.appendChild(boton);
+  });
+}
+
+function reordenarDiapositivaArrastrada(idDestino, despues) {
+  const idMovida = idDiapositivaArrastrada;
+  if (!idMovida || idMovida === idDestino) return;
+
+  const idActual = diapositivas[indiceActual]?.id;
+  const origen = diapositivas.findIndex((d) => d.id === idMovida);
+  const destino = diapositivas.findIndex((d) => d.id === idDestino);
+  if (origen < 0 || destino < 0) return;
+
+  let posicionInsercion = destino + (despues ? 1 : 0);
+  const [movida] = diapositivas.splice(origen, 1);
+  if (origen < posicionInsercion) posicionInsercion -= 1;
+  diapositivas.splice(posicionInsercion, 0, movida);
+  indiceActual = diapositivas.findIndex((d) => d.id === idActual);
+  publicarOrden();
+  dibujarPanel();
+}
+
+function posicionRelativaMiniatura(boton, x, y) {
+  const caja = boton.getBoundingClientRect();
+  const horizontal = panelDiapositivas.scrollWidth > panelDiapositivas.clientWidth;
+  return horizontal ? x > caja.left + caja.width / 2 : y > caja.top + caja.height / 2;
+}
+
+function configurarArrastreTactilDiapositiva(asa, boton, idDiapositiva) {
+  let destino = null;
+  let despues = false;
+  asa.addEventListener("pointerdown", (evento) => {
+    if (evento.pointerType === "mouse") return;
+    evento.preventDefault();
+    idDiapositivaArrastrada = idDiapositiva;
+    boton.classList.add("arrastrando");
+    asa.setPointerCapture(evento.pointerId);
+  });
+  asa.addEventListener("pointermove", (evento) => {
+    if (!idDiapositivaArrastrada || evento.pointerType === "mouse") return;
+    panelDiapositivas.querySelectorAll(".miniatura").forEach((miniatura) => {
+      miniatura.classList.remove("soltar-antes", "soltar-despues");
+    });
+    destino = document.elementFromPoint(evento.clientX, evento.clientY)?.closest(".miniatura") || null;
+    if (!destino) return;
+    despues = posicionRelativaMiniatura(destino, evento.clientX, evento.clientY);
+    destino.classList.toggle("soltar-despues", despues);
+    destino.classList.toggle("soltar-antes", !despues);
+  });
+  asa.addEventListener("pointerup", (evento) => {
+    if (!idDiapositivaArrastrada || evento.pointerType === "mouse") return;
+    if (destino) reordenarDiapositivaArrastrada(Number(destino.dataset.idDiapositiva), despues);
+    boton.classList.remove("arrastrando");
+    idDiapositivaArrastrada = null;
+    dibujarPanel();
   });
 }
 

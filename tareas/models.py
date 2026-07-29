@@ -21,6 +21,7 @@ class Tarea(db.Model):
     titulo = db.Column(db.String(120), nullable=False)
     descripcion = db.Column(db.String(500), nullable=True)
     estado = db.Column(db.String(20), nullable=False, default="pendiente")
+    orden = db.Column(db.Integer, nullable=True)
     id_asignado = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=True)
     fecha_limite = db.Column(db.Date, nullable=True)
     actualizado_en = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc),

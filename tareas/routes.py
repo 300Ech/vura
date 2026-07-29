@@ -52,6 +52,7 @@ def tablero(id_proyecto):
                 "id_asignado": t.id_asignado,
                 "fecha_limite": t.fecha_limite.isoformat() if t.fecha_limite else None,
                 "creado_en": t.id,  # solo para conservar el orden de creación
+                "orden": t.orden if t.orden is not None else t.id,
             }
             for t in proyecto.tareas
         ],
@@ -108,9 +109,13 @@ def guardar_copia(id_proyecto):
         descripcion = (str(entrada.get("descripcion") or "").strip() or None)
         if descripcion:
             descripcion = descripcion[:500]
+        tarea = existentes.get(uuid_tarea)
+        try:
+            orden = int(entrada.get("orden"))
+        except (TypeError, ValueError):
+            orden = tarea.id if tarea else 0
 
         uuids_recibidos.add(uuid_tarea)
-        tarea = existentes.get(uuid_tarea)
         if tarea is None:
             tarea = Tarea(uuid=uuid_tarea, id_proyecto=proyecto.id)
             db.session.add(tarea)
@@ -131,6 +136,7 @@ def guardar_copia(id_proyecto):
         tarea.titulo = titulo
         tarea.descripcion = descripcion
         tarea.estado = estado
+        tarea.orden = orden
         tarea.id_asignado = id_asignado
         tarea.fecha_limite = fecha_limite
         tarea.actualizado_por = current_user.id

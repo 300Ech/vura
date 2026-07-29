@@ -3,10 +3,6 @@
 
 {% block contenido %}
 <style>
-  /* Pizarra Fullscreen */
-  nav.navbar { display: none !important; }
-  main.container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
-  
   #notas {
     border: none !important;
     box-shadow: none !important;
@@ -68,31 +64,11 @@
     background-image: none;
   }
   
-  /* Marca discreta: el navbar está oculto en la pizarra, pero se sigue viendo que es Vura. */
-  #marca-vura {
-    position: fixed;
-    top: 14px;
-    left: 16px;
-    z-index: 1100;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-family: 'Caveat', cursive;
-    font-size: 1.5rem;
-    font-weight: 700;
-    line-height: 1;
-    color: var(--border-dark, #1e293b);
-    text-decoration: none;
-    opacity: 0.55;
-    transition: opacity .15s ease;
-  }
-  #marca-vura:hover { opacity: 1; }
-
   /* Controles superiores flotantes */
   .pizarra-top-controls {
     position: fixed;
     top: 16px;
-    left: 110px; /* Deja espacio para el dock lateral con etiquetas */
+    left: 20px;
     right: 16px;
     z-index: 1000;
     pointer-events: none; /* Clics pasan al lienzo */
@@ -230,47 +206,7 @@
     box-shadow: 6px 6px 0 rgba(0,0,0,0.2);
   }
   #reproductor-medio video { max-width: min(860px, 86vw); max-height: 70vh; display: block; }
-  /* Dock lateral: los accesos del proyecto siempre a mano, estilo FigJam. */
-  #dock-pizarra {
-    position: fixed;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    background: white;
-    border: var(--border-thickness, 2px) solid var(--border-dark, #1e293b);
-    border-radius: 14px;
-    box-shadow: var(--shadow-solid, 4px 4px 0 rgba(0, 0, 0, 0.15));
-    padding: 8px 6px;
-    z-index: 1000;
-  }
-  #dock-pizarra a, #dock-pizarra button {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    min-width: 62px;
-    border: none;
-    background: none;
-    color: #1e293b;
-    text-decoration: none;
-    border-radius: 10px;
-    padding: 6px 4px 4px;
-    line-height: 1;
-    font-family: inherit;
-  }
-  #dock-pizarra .icono { font-size: 1.2rem; line-height: 1; }
-  #dock-pizarra .etiqueta {
-    font-size: 0.66rem;
-    font-weight: 800;
-    line-height: 1.1;
-  }
-  #dock-pizarra a:hover, #dock-pizarra button:hover {
-    background: var(--sticky-yellow, #fde047);
-  }
-  
+  /* badge notifications for chat moved to base.html, keeping classes just in case */
   .badge-notificacion {
     position: absolute;
     top: 0px;
@@ -284,8 +220,6 @@
     z-index: 10;
   }
   .badge-notificacion.visible { display: block; }
-  
-  #boton-panel-chat { position: relative; }
 
   /* Panel de chat que se desliza sobre la pizarra. */
   #panel-chat {
@@ -425,25 +359,7 @@
       font-size: 0.85rem;
     }
 
-    /* Dock lateral → barra inferior, encima del menú de herramientas. */
-    #dock-pizarra {
-      top: auto;
-      bottom: 78px;
-      left: 8px;
-      right: 8px;
-      transform: none;
-      flex-direction: row;
-      justify-content: space-around;
-      overflow-x: auto;
-      padding: 6px 4px;
-      border-radius: 14px;
-      gap: 2px;
-    }
-    #dock-pizarra a, #dock-pizarra button {
-      min-width: 52px;
-      padding: 4px 2px;
-    }
-    #dock-pizarra .etiqueta { font-size: 0.58rem; }
+    /* Omitimos dock-pizarra porque fue removido */
 
     /* Menú de herramientas: scrolleable horizontalmente. */
     #menu-pizarra {
@@ -482,8 +398,6 @@
   }
 </style>
 
-<span id="marca-vura" title="Vura">✨ Vura</span>
-
 <div id="aviso-pizarra-movil" class="aviso-movil-light">
   <span>📱 La pizarra se ve mejor en una computadora. En el celular podés chatear, ver tareas y el equipo.</span>
   <button type="button" aria-label="Cerrar" onclick="this.parentElement.remove()">×</button>
@@ -506,28 +420,6 @@
   </span>
 </div>
 
-{# Dock lateral: todo el proyecto gira en torno a la pizarra. #}
-<div id="dock-pizarra">
-  <button id="boton-panel-chat" type="button" title="Chat del equipo">
-    <div id="badge-chat-pizarra" class="badge-notificacion"></div>
-    <span class="icono">💬</span><span class="etiqueta">Chat</span>
-  </button>
-  <a href="{{ url_for('chat.llamada', id_equipo=proyecto.equipo.id) }}" title="Videollamada">
-    <span class="icono">📹</span><span class="etiqueta">Llamada</span>
-  </a>
-  <a href="{{ url_for('tareas.tablero', id_proyecto=proyecto.id) }}" title="Tareas">
-    <span class="icono">🗂️</span><span class="etiqueta">Tareas</span>
-  </a>
-  <a href="{{ url_for('presentaciones.editor', id_proyecto=proyecto.id) }}" title="Presentación">
-    <span class="icono">🖼️</span><span class="etiqueta">Diapos</span>
-  </a>
-  <a href="{{ url_for('proyectos.ver_proyecto', id_proyecto=proyecto.id) }}" title="Ver proyecto">
-    <span class="icono">📁</span><span class="etiqueta">Proyecto</span>
-  </a>
-  <a href="{{ url_for('equipos.ver_equipo', id_equipo=proyecto.equipo.id) }}" title="Equipo">
-    <span class="icono">👥</span><span class="etiqueta">Equipo</span>
-  </a>
-</div>
 
 {# Panel de chat sobre la pizarra: chateás sin dejar de ver los post-its. #}
 <div id="panel-chat" data-id-equipo="{{ proyecto.equipo.id }}" data-id-usuario="{{ current_user.id }}" data-nombre-usuario="{{ current_user.nombre }}">

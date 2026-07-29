@@ -1,7 +1,7 @@
 // Service Worker de Vura: permite abrir la aplicación sin conexión.
 // Librerías de CDN (versionadas, nunca cambian): caché primero.
 // Todo lo propio (páginas y archivos de la app): red primero, caché de respaldo.
-const NOMBRE_CACHE = "vura-v3";
+const NOMBRE_CACHE = "vura-v4";
 
 self.addEventListener("install", (evento) => {
   evento.waitUntil(

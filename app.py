@@ -51,6 +51,7 @@ def asegurar_columnas():
 
     columnas_esperadas = {
         "diapositivas": {"notas": "TEXT"},
+        "tareas": {"orden": "INTEGER"},
     }
     inspector = inspect(db.engine)
     for tabla, columnas in columnas_esperadas.items():
