@@ -132,6 +132,29 @@
     font-weight: 800;
     color: #64748b;
   }
+  #reacciones-postit {
+    display: none;
+    position: absolute;
+    bottom: 78px;
+    left: 50%;
+    transform: translateX(-50%);
+    gap: 5px;
+    background: white;
+    border: 2px solid #1e293b;
+    border-radius: 999px;
+    box-shadow: 3px 3px 0 rgba(0,0,0,.15);
+    padding: 6px 10px;
+    pointer-events: auto;
+  }
+  #reacciones-postit.abierto { display: flex; }
+  #reacciones-postit button {
+    border: 0;
+    background: transparent;
+    font-size: 1.2rem;
+    padding: 2px 5px;
+    border-radius: 8px;
+  }
+  #reacciones-postit button:hover { background: #f1f5f9; }
   /* Reproductor flotante para videos (doble clic en la tarjeta). */
   #reproductor-medio {
     position: fixed;
@@ -219,6 +242,29 @@
     flex-direction: column;
     background: var(--bg-color, #f3f4f6);
   }
+  #panel-chat .imagen-chat-panel {
+    display: block;
+    max-width: 230px;
+    max-height: 190px;
+    border-radius: 7px;
+    cursor: zoom-in;
+  }
+  #panel-chat .reacciones-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: 4px;
+  }
+  #panel-chat .reaccion-panel {
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    background: white;
+    padding: 1px 6px;
+    font-size: .72rem;
+  }
+  #panel-chat .reaccion-panel.mia { background: #ede9fe; border-color: #8b5cf6; }
+  #emojis-chat-panel { display: none; }
+  #emojis-chat-panel.abierto { display: flex; }
 </style>
 
 <div class="pizarra-top-controls d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -268,10 +314,21 @@
   </div>
   <div id="mensajes-panel" class="mensajes"></div>
   <div id="aviso-escribiendo-panel" class="px-3 small text-muted fst-italic" style="min-height: 1.4em;"></div>
-  <form id="formulario-chat-panel" class="d-flex gap-2 p-2 border-top" autocomplete="off">
-    <input id="texto-chat-panel" class="form-control form-control-sm" maxlength="1000" placeholder="Escribe un mensaje...">
-    <button class="btn btn-sm btn-primary" type="submit">Enviar</button>
-  </form>
+  <div class="p-2 border-top">
+    <div id="emojis-chat-panel" class="gap-1 flex-wrap mb-1">
+      {% for emoji in ["😀", "😂", "😍", "🤔", "😮", "😢", "👏", "🙌", "🔥", "✅", "🎉", "❤️"] %}
+        <button class="btn btn-sm btn-light emoji-panel" type="button">{{ emoji }}</button>
+      {% endfor %}
+    </div>
+    <form id="formulario-chat-panel" class="d-flex gap-1" autocomplete="off">
+      <button id="boton-emojis-panel" class="btn btn-sm btn-outline-secondary" type="button" title="Emojis">😊</button>
+      <button id="boton-imagen-panel" class="btn btn-sm btn-outline-secondary" type="button" title="Imagen">📷</button>
+      <button id="boton-voz-panel" class="btn btn-sm btn-outline-secondary" type="button" title="Voz-it">🎙️</button>
+      <input id="texto-chat-panel" class="form-control form-control-sm" maxlength="1000" placeholder="Mensaje...">
+      <button class="btn btn-sm btn-primary" type="submit">Enviar</button>
+    </form>
+    <input id="entrada-imagen-panel" type="file" accept="image/*" class="d-none">
+  </div>
 </div>
 
 <script>
@@ -285,6 +342,11 @@
     <div id="zona-pizarra">
       <canvas id="lienzo-pizarra" width="1600" height="1000"></canvas>
       <div id="menu-pizarra">
+        <div id="reacciones-postit">
+          {% for emoji in ["👍", "❤️", "😂", "🎉", "👀"] %}
+            <button type="button" data-reaccion="{{ emoji }}">{{ emoji }}</button>
+          {% endfor %}
+        </div>
         <div class="barra">
           <button id="boton-postit" class="herramienta" type="button" title="Post-it (o doble clic en vacío)">
             <span class="icono">🗒️</span>
@@ -329,6 +391,10 @@
 
           <div class="separador-menu"></div>
 
+          <button id="boton-reaccion-postit" class="herramienta" type="button" title="Reaccionar al post-it seleccionado">
+            <span class="icono">😊</span>
+            <span class="etiqueta">Reacción</span>
+          </button>
           <button id="boton-borrar-objeto" class="herramienta peligro" type="button">
             <span class="icono">🗑️</span>
             <span class="etiqueta">Borrar</span>

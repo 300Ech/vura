@@ -25,9 +25,10 @@ socketNotificaciones.on("nuevo_mensaje", (datos) => {
   const enlaceChat = `/equipos/${datos.id_equipo}/chat`;
   if (window.location.pathname === enlaceChat) return; // ya estoy viendo ese chat
 
+  const resumen = datos.resumen || datos.texto || "Nuevo mensaje";
   notificar(
     `${datos.nombre} · ${datos.nombre_equipo}`,
-    datos.texto.length > 80 ? datos.texto.slice(0, 80) + "…" : datos.texto,
+    resumen.length > 80 ? resumen.slice(0, 80) + "…" : resumen,
     enlaceChat,
   );
 });

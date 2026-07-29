@@ -2,6 +2,44 @@
 {% block titulo %}Chat de {{ equipo.nombre }}{% endblock %}
 
 {% block contenido %}
+<style>
+  .burbuja-chat { position: relative; max-width: 75%; }
+  .imagen-chat {
+    display: block;
+    max-width: 320px;
+    max-height: 260px;
+    border-radius: 8px;
+    cursor: zoom-in;
+  }
+  .reacciones-chat { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+  .reaccion-chat {
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    background: white;
+    padding: 1px 7px;
+    font-size: 0.8rem;
+  }
+  .reaccion-chat.mia { background: #ede9fe; border-color: #8b5cf6; }
+  .menu-reacciones {
+    display: flex;
+    gap: 3px;
+    margin-top: 4px;
+    opacity: 0;
+    transition: opacity .15s;
+  }
+  .burbuja-chat:hover .menu-reacciones { opacity: 1; }
+  .menu-reacciones button { border: 0; background: transparent; padding: 1px 3px; }
+  #selector-emojis-chat { display: none; }
+  #selector-emojis-chat.abierto { display: flex; }
+  #visor-imagen-chat {
+    position: fixed; inset: 0; z-index: 2500; display: none;
+    justify-content: center; align-items: center;
+    background: rgba(15,23,42,.8); padding: 24px;
+  }
+  #visor-imagen-chat.abierto { display: flex; }
+  #visor-imagen-chat img { max-width: 90vw; max-height: 88vh; border-radius: 8px; }
+</style>
+
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h4 mb-0">Chat de «{{ equipo.nombre }}»</h1>
   <div>
@@ -16,29 +54,29 @@
      class="card shadow-sm">
   <div id="lista-mensajes" class="card-body d-flex flex-column bg-light"
        style="height: 60vh; overflow-y: auto;">
-    {% for mensaje in mensajes %}
-      {% set es_mio = mensaje.id_usuario == current_user.id %}
-      <div class="p-2 rounded mb-2 {{ 'bg-primary text-white ms-auto' if es_mio else 'bg-white border' }}"
-           style="max-width: 75%;">
-        <div class="small {{ 'text-white-50' if es_mio else 'text-muted' }}">
-          {{ mensaje.usuario.nombre }} · {{ mensaje.enviado_en | hora_local("%H:%M") }}
-        </div>
-        <div>{{ mensaje.texto }}</div>
-      </div>
-    {% else %}
-      <p class="text-muted text-center my-auto">Aún no hay mensajes. ¡Escribe el primero!</p>
-    {% endfor %}
   </div>
   <div id="aviso-escribiendo" class="px-3 small text-muted fst-italic" style="min-height: 1.4em;"></div>
   <div class="card-footer bg-white">
+    <div id="selector-emojis-chat" class="gap-1 mb-2">
+      {% for emoji in ["😀", "😂", "😍", "🤔", "😮", "😢", "👏", "🙌", "🔥", "✅", "🎉", "❤️"] %}
+        <button class="btn btn-sm btn-light emoji-chat" type="button">{{ emoji }}</button>
+      {% endfor %}
+    </div>
     <form id="formulario-mensaje" class="d-flex gap-2" autocomplete="off">
+      <button id="boton-emojis-chat" class="btn btn-outline-secondary" type="button" title="Emojis">😊</button>
+      <button id="boton-imagen-chat" class="btn btn-outline-secondary" type="button" title="Adjuntar imagen">📷</button>
+      <button id="boton-voz-chat" class="btn btn-outline-secondary" type="button" title="Grabar Voz-it">🎙️</button>
       <input id="campo-texto" class="form-control" maxlength="1000"
              placeholder="Escribe un mensaje..." autofocus>
       <button class="btn btn-primary" type="submit">Enviar</button>
     </form>
+    <input id="entrada-imagen-chat" type="file" accept="image/*" class="d-none">
   </div>
 </div>
 
+<div id="visor-imagen-chat"><img alt="Imagen ampliada"></div>
+
+<script id="datos-mensajes" type="application/json">{{ datos_mensajes | safe }}</script>
 <script src="https://cdn.jsdelivr.net/npm/socket.io@4.7.5/client-dist/socket.io.min.js"></script>
 <script src="{{ url_for('chat.static', filename='chat.js') }}"></script>
 {% endblock %}

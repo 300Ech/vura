@@ -8,6 +8,7 @@ import { conectarDocumento } from "/colaboracion/static/colaboracion.js";
 const contenedorNotas = document.getElementById("notas");
 const idProyecto = Number(contenedorNotas.dataset.idProyecto);
 const contenidoInicial = JSON.parse(document.getElementById("contenido-inicial").textContent);
+const idUsuarioPizarra = Number(document.body.dataset.idUsuario);
 
 const indicadorEstado = document.getElementById("estado-guardado");
 
@@ -28,6 +29,23 @@ const PostIt = fabric.util.createClass(fabric.Textbox, {
     this.callSuper("initDimensions");
     this.height = Math.max(this.height, this.width);
   },
+
+  _render: function (ctx) {
+    this.callSuper("_render", ctx);
+    const resumen = Object.entries(this.reacciones || {})
+      .filter(([, usuarios]) => usuarios.length > 0)
+      .map(([emoji, usuarios]) => `${emoji} ${usuarios.length}`)
+      .join("  ");
+    if (!resumen) return;
+
+    // Pie pequeño dentro del papel; forma parte del objeto y viaja con él.
+    ctx.save();
+    ctx.font = "bold 15px Nunito";
+    ctx.fillStyle = "#475569";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(resumen, -this.width / 2 + 10, this.height / 2 - 8);
+    ctx.restore();
+  },
 });
 
 // Permite que Fabric reconstruya los post-its guardados o los de un compañero.
@@ -46,6 +64,7 @@ function crearPostIt(texto, opciones) {
     padding: 14,
     angle: Math.random() * 6 - 3, // inclinación de -3° a +3°
     shadow: { color: "rgba(0,0,0,0.2)", blur: 4, offsetX: 4, offsetY: 5 },
+    reacciones: {},
     ...opciones,
   });
 }
@@ -58,7 +77,9 @@ let aplicandoRemoto = false; // evita re-publicar lo que llega de un compañero
 
 // ---- Publicar y aplicar cambios ----
 
-const PROPS_EXTRA = ["uuid", "vuraTipo", "mediaUrl", "mediaNombre", "mediaDuracion"];
+const PROPS_EXTRA = [
+  "uuid", "vuraTipo", "mediaUrl", "mediaNombre", "mediaDuracion", "reacciones",
+];
 
 function publicarObjeto(objeto) {
   if (!objeto.uuid) objeto.uuid = crypto.randomUUID();
@@ -87,6 +108,7 @@ function hidratarObjeto(objeto, datos, uuid) {
   if (datos.mediaUrl) objeto.mediaUrl = datos.mediaUrl;
   if (datos.mediaNombre) objeto.mediaNombre = datos.mediaNombre;
   if (datos.mediaDuracion) objeto.mediaDuracion = datos.mediaDuracion;
+  if (datos.reacciones) objeto.reacciones = datos.reacciones;
   return objeto;
 }
 
@@ -245,6 +267,35 @@ document.querySelectorAll(".muestra-color").forEach((muestra) => {
       lienzo.renderAll();
       publicarObjeto(objeto);
     }
+  });
+});
+
+// Cada post-it guarda qué usuarios eligieron cada reacción.
+// Al publicar el objeto, Yjs actualiza inmediatamente el papel en los demás navegadores.
+const paletaReaccionesPostIt = document.getElementById("reacciones-postit");
+document.getElementById("boton-reaccion-postit").addEventListener("click", () => {
+  const objeto = lienzo.getActiveObject();
+  if (!objeto || objeto.type !== "post-it") {
+    alert("Selecciona un post-it para reaccionar.");
+    return;
+  }
+  paletaReaccionesPostIt.classList.toggle("abierto");
+});
+
+document.querySelectorAll("#reacciones-postit [data-reaccion]").forEach((boton) => {
+  boton.addEventListener("click", () => {
+    const postIt = lienzo.getActiveObject();
+    if (!postIt || postIt.type !== "post-it") return;
+    const emoji = boton.dataset.reaccion;
+    postIt.reacciones ||= {};
+    const usuarios = new Set(postIt.reacciones[emoji] || []);
+    if (usuarios.has(idUsuarioPizarra)) usuarios.delete(idUsuarioPizarra);
+    else usuarios.add(idUsuarioPizarra);
+    postIt.reacciones[emoji] = [...usuarios];
+    postIt.dirty = true;
+    lienzo.renderAll();
+    publicarObjeto(postIt);
+    paletaReaccionesPostIt.classList.remove("abierto");
   });
 });
 
@@ -633,8 +684,7 @@ window.addEventListener("beforeunload", (evento) => {
 });
 
 // ---- Panel de chat sobre la pizarra ----
-// Reutiliza los mismos eventos de Socket.IO del chat normal;
-// el historial se pide al servidor la primera vez que se abre.
+// Tiene las mismas funciones del chat completo, sin abandonar la pizarra.
 
 const panelChat = document.getElementById("panel-chat");
 const idEquipo = Number(panelChat.dataset.idEquipo);
@@ -642,6 +692,8 @@ const idUsuarioActual = Number(panelChat.dataset.idUsuario);
 const mensajesPanel = document.getElementById("mensajes-panel");
 const avisoEscribiendoPanel = document.getElementById("aviso-escribiendo-panel");
 const textoChatPanel = document.getElementById("texto-chat-panel");
+const datosMensajesPanel = new Map();
+const emojisReaccionPanel = ["👍", "❤️", "😂", "🎉", "👀"];
 
 const socketChat = io();
 let historialCargado = false;
@@ -652,15 +704,14 @@ socketChat.on("connect", () => {
 
 document.getElementById("boton-panel-chat").addEventListener("click", async () => {
   panelChat.classList.toggle("abierto");
-  if (panelChat.classList.contains("abierto")) {
-    if (!historialCargado) {
-      historialCargado = true;
-      const respuesta = await fetch(`/equipos/${idEquipo}/chat/mensajes`);
-      const datos = await respuesta.json();
-      datos.mensajes.forEach(agregarMensajePanel);
-    }
-    textoChatPanel.focus();
+  if (!panelChat.classList.contains("abierto")) return;
+  if (!historialCargado) {
+    historialCargado = true;
+    const respuesta = await fetch(`/equipos/${idEquipo}/chat/mensajes`);
+    const datos = await respuesta.json();
+    datos.mensajes.forEach(agregarMensajePanel);
   }
+  textoChatPanel.focus();
 });
 
 document.getElementById("boton-cerrar-chat").addEventListener("click", () => {
@@ -669,7 +720,20 @@ document.getElementById("boton-cerrar-chat").addEventListener("click", () => {
 
 socketChat.on("nuevo_mensaje", (mensaje) => {
   avisoEscribiendoPanel.textContent = "";
-  if (historialCargado) agregarMensajePanel(mensaje);
+  if (historialCargado && !datosMensajesPanel.has(mensaje.id)) agregarMensajePanel(mensaje);
+});
+
+socketChat.on("reacciones_mensaje", (datos) => {
+  const mensaje = datosMensajesPanel.get(datos.id_mensaje);
+  if (!mensaje) return;
+  mensaje.reacciones.totales = datos.totales;
+  if (datos.id_usuario === idUsuarioActual) {
+    const mias = new Set(mensaje.reacciones.mias);
+    if (datos.activo) mias.add(datos.emoji);
+    else mias.delete(datos.emoji);
+    mensaje.reacciones.mias = [...mias];
+  }
+  dibujarReaccionesPanel(mensaje);
 });
 
 socketChat.on("usuario_escribiendo", (datos) => {
@@ -695,7 +759,100 @@ document.getElementById("formulario-chat-panel").addEventListener("submit", (eve
   textoChatPanel.focus();
 });
 
+// Emojis del panel.
+const emojisPanel = document.getElementById("emojis-chat-panel");
+document.getElementById("boton-emojis-panel").addEventListener("click", () => {
+  emojisPanel.classList.toggle("abierto");
+});
+document.querySelectorAll(".emoji-panel").forEach((boton) => {
+  boton.addEventListener("click", () => {
+    textoChatPanel.value += boton.textContent;
+    textoChatPanel.focus();
+  });
+});
+
+async function subirAdjuntoPanel(archivo, tipo) {
+  const formulario = new FormData();
+  formulario.append("archivo", archivo);
+  formulario.append("tipo", tipo);
+  const respuesta = await fetch(`/equipos/${idEquipo}/chat/adjuntos`, {
+    method: "POST",
+    body: formulario,
+  });
+  const datos = await respuesta.json();
+  if (!respuesta.ok) throw new Error(datos.error || "No se pudo enviar el archivo.");
+}
+
+document.getElementById("boton-imagen-panel").addEventListener("click", () => {
+  document.getElementById("entrada-imagen-panel").click();
+});
+document.getElementById("entrada-imagen-panel").addEventListener("change", async (evento) => {
+  const archivo = evento.target.files[0];
+  evento.target.value = "";
+  if (!archivo) return;
+  try {
+    await subirAdjuntoPanel(archivo, "imagen");
+  } catch (error) {
+    alert(error.message);
+  }
+});
+
+// Voz-it del panel.
+const botonVozPanel = document.getElementById("boton-voz-panel");
+let grabadoraPanel = null;
+let flujoPanel = null;
+let trozosPanel = [];
+let limitePanel = null;
+
+botonVozPanel.addEventListener("click", async () => {
+  if (grabadoraPanel) {
+    grabadoraPanel.stop();
+    return;
+  }
+  try {
+    flujoPanel = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mime = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm"
+      : (MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" : "");
+    grabadoraPanel = mime ? new MediaRecorder(flujoPanel, { mimeType: mime }) : new MediaRecorder(flujoPanel);
+    trozosPanel = [];
+    grabadoraPanel.addEventListener("dataavailable", (evento) => {
+      if (evento.data.size) trozosPanel.push(evento.data);
+    });
+    grabadoraPanel.addEventListener("stop", async () => {
+      flujoPanel.getTracks().forEach((pista) => pista.stop());
+      clearTimeout(limitePanel);
+      const mimeFinal = grabadoraPanel.mimeType || mime || "audio/webm";
+      const extension = mimeFinal.includes("mp4") ? "m4a" : "webm";
+      const blob = new Blob(trozosPanel, { type: mimeFinal });
+      grabadoraPanel = null;
+      botonVozPanel.classList.remove("btn-danger");
+      botonVozPanel.classList.add("btn-outline-secondary");
+      botonVozPanel.textContent = "🎙️";
+      if (!blob.size) return;
+      try {
+        await subirAdjuntoPanel(
+          new File([blob], `voz-it-${Date.now()}.${extension}`, { type: mimeFinal }),
+          "audio",
+        );
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+    grabadoraPanel.start();
+    botonVozPanel.classList.remove("btn-outline-secondary");
+    botonVozPanel.classList.add("btn-danger");
+    botonVozPanel.textContent = "⏹";
+    limitePanel = setTimeout(() => {
+      if (grabadoraPanel) grabadoraPanel.stop();
+    }, 120000);
+  } catch (error) {
+    alert("No se pudo usar el micrófono.");
+  }
+});
+
 function agregarMensajePanel(mensaje) {
+  mensaje.reacciones ||= { totales: {}, mias: [] };
+  datosMensajesPanel.set(mensaje.id, mensaje);
   const esMio = mensaje.id_usuario === idUsuarioActual;
   const burbuja = document.createElement("div");
   burbuja.className = "p-2 rounded mb-2 small " + (esMio ? "bg-primary text-white ms-auto" : "bg-white border");
@@ -704,10 +861,71 @@ function agregarMensajePanel(mensaje) {
   const encabezado = document.createElement("div");
   encabezado.className = "small " + (esMio ? "text-white-50" : "text-muted");
   encabezado.textContent = mensaje.nombre + " · " + mensaje.hora;
-  const cuerpo = document.createElement("div");
-  cuerpo.textContent = mensaje.texto;
+  burbuja.appendChild(encabezado);
 
-  burbuja.append(encabezado, cuerpo);
+  if (mensaje.texto) {
+    const cuerpo = document.createElement("div");
+    cuerpo.textContent = mensaje.texto;
+    burbuja.appendChild(cuerpo);
+  }
+  if (mensaje.adjunto?.tipo === "imagen") {
+    const imagen = document.createElement("img");
+    imagen.className = "imagen-chat-panel mt-1";
+    imagen.src = mensaje.adjunto.url;
+    imagen.alt = mensaje.adjunto.nombre;
+    imagen.addEventListener("click", () => window.open(imagen.src, "_blank"));
+    burbuja.appendChild(imagen);
+  } else if (mensaje.adjunto?.tipo === "audio") {
+    const audio = document.createElement("audio");
+    audio.controls = true;
+    audio.preload = "metadata";
+    audio.src = mensaje.adjunto.url;
+    audio.style.maxWidth = "240px";
+    burbuja.appendChild(audio);
+  }
+
+  const reacciones = document.createElement("div");
+  reacciones.id = "reacciones-panel-" + mensaje.id;
+  reacciones.className = "reacciones-panel";
+  burbuja.appendChild(reacciones);
+
+  const menu = document.createElement("div");
+  menu.className = "mt-1";
+  emojisReaccionPanel.forEach((emoji) => {
+    const boton = document.createElement("button");
+    boton.type = "button";
+    boton.className = "btn btn-sm p-0 me-1";
+    boton.textContent = emoji;
+    boton.addEventListener("click", () => {
+      socketChat.emit("reaccionar_mensaje", {
+        id_equipo: idEquipo, id_mensaje: mensaje.id, emoji: emoji,
+      });
+    });
+    menu.appendChild(boton);
+  });
+  burbuja.appendChild(menu);
+
   mensajesPanel.appendChild(burbuja);
+  dibujarReaccionesPanel(mensaje);
   mensajesPanel.scrollTop = mensajesPanel.scrollHeight;
+}
+
+function dibujarReaccionesPanel(mensaje) {
+  const contenedor = document.getElementById("reacciones-panel-" + mensaje.id);
+  if (!contenedor) return;
+  contenedor.innerHTML = "";
+  const mias = new Set(mensaje.reacciones.mias || []);
+  Object.entries(mensaje.reacciones.totales || {}).forEach(([emoji, cantidad]) => {
+    if (!cantidad) return;
+    const boton = document.createElement("button");
+    boton.type = "button";
+    boton.className = "reaccion-panel" + (mias.has(emoji) ? " mia" : "");
+    boton.textContent = `${emoji} ${cantidad}`;
+    boton.addEventListener("click", () => {
+      socketChat.emit("reaccionar_mensaje", {
+        id_equipo: idEquipo, id_mensaje: mensaje.id, emoji: emoji,
+      });
+    });
+    contenedor.appendChild(boton);
+  });
 }
