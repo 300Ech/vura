@@ -270,6 +270,23 @@
   #dock-pizarra a:hover, #dock-pizarra button:hover {
     background: var(--sticky-yellow, #fde047);
   }
+  
+  .badge-notificacion {
+    position: absolute;
+    top: 0px;
+    right: 4px;
+    width: 10px;
+    height: 10px;
+    background: #ef4444; /* rojo intenso */
+    border: 2px solid white;
+    border-radius: 50%;
+    display: none;
+    z-index: 10;
+  }
+  .badge-notificacion.visible { display: block; }
+  
+  #boton-panel-chat { position: relative; }
+
   /* Panel de chat que se desliza sobre la pizarra. */
   #panel-chat {
     position: fixed;
@@ -492,6 +509,7 @@
 {# Dock lateral: todo el proyecto gira en torno a la pizarra. #}
 <div id="dock-pizarra">
   <button id="boton-panel-chat" type="button" title="Chat del equipo">
+    <div id="badge-chat-pizarra" class="badge-notificacion"></div>
     <span class="icono">💬</span><span class="etiqueta">Chat</span>
   </button>
   <a href="{{ url_for('chat.llamada', id_equipo=proyecto.equipo.id) }}" title="Videollamada">

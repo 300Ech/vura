@@ -744,6 +744,7 @@ const idUsuarioActual = Number(panelChat.dataset.idUsuario);
 const mensajesPanel = document.getElementById("mensajes-panel");
 const avisoEscribiendoPanel = document.getElementById("aviso-escribiendo-panel");
 const textoChatPanel = document.getElementById("texto-chat-panel");
+const badgeChat = document.getElementById("badge-chat-pizarra");
 const datosMensajesPanel = new Map();
 const emojisReaccionPanel = ["👍", "❤️", "😂", "🎉", "👀"];
 
@@ -755,6 +756,7 @@ socketChat.on("connect", () => {
 });
 
 document.getElementById("boton-panel-chat").addEventListener("click", async () => {
+  badgeChat.classList.remove("visible");
   panelChat.classList.toggle("abierto");
   if (!panelChat.classList.contains("abierto")) return;
   if (!historialCargado) {
@@ -773,6 +775,10 @@ document.getElementById("boton-cerrar-chat").addEventListener("click", () => {
 socketChat.on("nuevo_mensaje", (mensaje) => {
   avisoEscribiendoPanel.textContent = "";
   if (historialCargado && !datosMensajesPanel.has(mensaje.id)) agregarMensajePanel(mensaje);
+  
+  if (!panelChat.classList.contains("abierto") && mensaje.id_usuario !== idUsuarioActual) {
+    badgeChat.classList.add("visible");
+  }
 });
 
 socketChat.on("reacciones_mensaje", (datos) => {

@@ -71,6 +71,33 @@
     color: #1e293b;
   }
   .boton-icono:hover { border-color: var(--primary-btn, #8b5cf6); background: #f8fafc; }
+  /* Barra por categorías */
+  .categorias-barra {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .cat-tab {
+    border: 2px solid var(--border-dark, #1e293b);
+    background: white;
+    border-radius: 10px;
+    padding: 5px 12px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: #1e293b;
+  }
+  .cat-tab:hover { background: #f8fafc; }
+  .cat-tab.activa {
+    background: var(--primary-btn, #8b5cf6);
+    color: white;
+  }
+  .panel-categoria {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    min-height: 34px;
+  }
   #panel-diapositivas {
     width: 180px;
     max-height: 72vh;
@@ -231,24 +258,56 @@
 
 <div id="editor-presentacion" data-id-presentacion="{{ presentacion.id }}" data-id-proyecto="{{ proyecto.id }}">
   <div class="barra-herramientas mb-2">
-    <div class="grupo-herramientas mb-2">
-      <span class="etiqueta-grupo">Diseño</span>
-      <button id="boton-plantillas" class="btn btn-sm btn-primary" type="button">🎨 Plantillas y temas</button>
-      <button id="boton-iconos" class="btn btn-sm btn-outline-primary" type="button">⭐ Iconos</button>
+    {# Barra por categorías, estilo Canva: elegís una categoría y abajo salen sus opciones. #}
+    <div class="categorias-barra mb-2">
+      <button class="cat-tab activa" type="button" data-cat="plantillas">🎨 Plantillas</button>
+      <button class="cat-tab" type="button" data-cat="texto">✏️ Texto</button>
+      <button class="cat-tab" type="button" data-cat="formas">⬛ Formas</button>
+      <button class="cat-tab" type="button" data-cat="iconos">⭐ Iconos</button>
+      <button class="cat-tab" type="button" data-cat="componentes">🧩 Componentes</button>
+      <button class="cat-tab" type="button" data-cat="imagen">🖼️ Imagen</button>
     </div>
 
-    <div class="grupo-herramientas mb-2">
-      <span class="etiqueta-grupo">Insertar</span>
-      <button id="boton-texto" class="btn btn-sm btn-outline-primary" type="button">Texto</button>
+    <div class="panel-categoria" data-panel="plantillas">
+      <button id="boton-plantillas" class="btn btn-sm btn-primary" type="button">Abrir plantillas y temas</button>
+      <span class="text-muted small">18 diseños listos · 6 temas</span>
+    </div>
+
+    <div class="panel-categoria d-none" data-panel="texto">
+      <button id="boton-titulo" class="btn btn-sm btn-outline-primary" type="button">+ Título</button>
+      <button id="boton-subtitulo" class="btn btn-sm btn-outline-primary" type="button">+ Subtítulo</button>
+      <button id="boton-texto" class="btn btn-sm btn-outline-primary" type="button">+ Cuerpo</button>
+    </div>
+
+    <div class="panel-categoria d-none" data-panel="formas">
       <button id="boton-rectangulo" class="btn btn-sm btn-outline-primary" type="button">Rectángulo</button>
       <button id="boton-circulo" class="btn btn-sm btn-outline-primary" type="button">Círculo</button>
       <button id="boton-triangulo" class="btn btn-sm btn-outline-primary" type="button">Triángulo</button>
       <button id="boton-flecha" class="btn btn-sm btn-outline-primary" type="button">Flecha</button>
       <button id="boton-linea" class="btn btn-sm btn-outline-primary" type="button">Línea</button>
-      <button id="boton-imagen" class="btn btn-sm btn-outline-primary" type="button">Imagen URL</button>
+    </div>
+
+    <div class="panel-categoria d-none" data-panel="iconos">
+      <button id="boton-iconos" class="btn btn-sm btn-primary" type="button">Abrir galería de iconos</button>
+      <span class="text-muted small">40 iconos (licencia MIT)</span>
+    </div>
+
+    <div class="panel-categoria d-none" data-panel="componentes">
+      <button class="btn btn-sm btn-outline-primary comp" type="button" data-comp="tarjeta">Tarjeta</button>
+      <button class="btn btn-sm btn-outline-primary comp" type="button" data-comp="destacado">Caja destacada</button>
+      <button class="btn btn-sm btn-outline-primary comp" type="button" data-comp="estadistica">Estadística</button>
+      <button class="btn btn-sm btn-outline-primary comp" type="button" data-comp="viñeta">Punto con texto</button>
+      <button class="btn btn-sm btn-outline-primary comp" type="button" data-comp="paso">Paso numerado</button>
+      <button class="btn btn-sm btn-outline-primary comp" type="button" data-comp="boton">Botón</button>
+    </div>
+
+    <div class="panel-categoria d-none" data-panel="imagen">
+      <button id="boton-imagen" class="btn btn-sm btn-outline-primary" type="button">Desde URL</button>
       <label class="btn btn-sm btn-outline-primary mb-0" for="entrada-imagen-archivo">Subir imagen</label>
       <input id="entrada-imagen-archivo" type="file" accept="image/*" class="d-none">
     </div>
+
+    <hr class="my-2">
 
     <div class="grupo-herramientas">
       <span class="etiqueta-grupo">Estilo</span>

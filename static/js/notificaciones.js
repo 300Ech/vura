@@ -21,11 +21,20 @@ document.addEventListener("click", function pedirPermiso() {
 });
 
 // Generador de sonido corto (tipo "pop") sin necesidad de archivos MP3.
+let contextoAudioCompartido = null;
+
 function reproducirSonidoNotificacion() {
   const ContextoAudio = window.AudioContext || window.webkitAudioContext;
   if (!ContextoAudio) return;
   try {
-    const ctx = new ContextoAudio();
+    if (!contextoAudioCompartido) {
+      contextoAudioCompartido = new ContextoAudio();
+    }
+    const ctx = contextoAudioCompartido;
+    if (ctx.state === "suspended") {
+      ctx.resume();
+    }
+    
     const osc = ctx.createOscillator();
     const ganancia = ctx.createGain();
     
@@ -51,7 +60,7 @@ socketNotificaciones.on("nuevo_mensaje", (datos) => {
   
   reproducirSonidoNotificacion();
 
-  const enlaceChat = \`/equipos/\${datos.id_equipo}/chat\`;
+  const enlaceChat = `/equipos/${datos.id_equipo}/chat`;
   if (window.location.pathname === enlaceChat) return; // ya estoy viendo ese chat
 
   const resumen = datos.resumen || datos.texto || "Nuevo mensaje";

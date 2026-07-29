@@ -175,11 +175,13 @@ function cargarDiapositiva(indice) {
     lienzo.loadFromJSON(contenido, () => {
       lienzo.renderAll();
       selectorFondo.value = rgbAHex(lienzo.backgroundColor) || "#ffffff";
+      detectarTemaAplicado();
       cargandoDiapositiva = false;
     });
   } else {
     lienzo.renderAll();
     selectorFondo.value = "#ffffff";
+    temaAplicado = TEMAS[0];
     cargandoDiapositiva = false;
   }
   dibujarPanel();
@@ -224,6 +226,100 @@ lienzo.on("object:added", programarGuardado);
 lienzo.on("object:modified", programarGuardado);
 lienzo.on("object:removed", programarGuardado);
 
+// ---- Guías de alineación con "imán" (snap) ----
+// Al mover un objeto, si un borde o su centro se acerca al centro del lienzo,
+// a un borde del lienzo o a otro objeto, se pega y aparece una línea rosa.
+// Es lo que hace que el editor se sienta profesional al usarlo.
+
+const UMBRAL_SNAP = 6; // qué tan cerca (px) hay que estar para que se pegue
+let guiasVisibles = [];
+
+function bordesDe(objeto) {
+  const r = objeto.getBoundingRect();
+  return {
+    izq: r.left, centroX: r.left + r.width / 2, der: r.left + r.width,
+    arr: r.top, centroY: r.top + r.height / 2, aba: r.top + r.height,
+  };
+}
+
+lienzo.on("object:moving", (evento) => {
+  const objeto = evento.target;
+  guiasVisibles = [];
+  const b = bordesDe(objeto);
+
+  // Puntos de referencia: bordes y centro del lienzo + los de los demás objetos.
+  const activos = lienzo.getActiveObjects();
+  const objetivosX = [0, ANCHO / 2, ANCHO];
+  const objetivosY = [0, ALTO / 2, ALTO];
+  lienzo.getObjects().forEach((otro) => {
+    if (activos.includes(otro)) return;
+    const o = bordesDe(otro);
+    objetivosX.push(o.izq, o.centroX, o.der);
+    objetivosY.push(o.arr, o.centroY, o.aba);
+  });
+
+  // Elegir el mejor "imán" para X (probando borde izq, centro y der del objeto).
+  let mejorX = null;
+  objetivosX.forEach((meta) => {
+    [b.izq, b.centroX, b.der].forEach((valor) => {
+      const distancia = Math.abs(valor - meta);
+      if (distancia <= UMBRAL_SNAP && (!mejorX || distancia < mejorX.distancia)) {
+        mejorX = { distancia, delta: meta - valor, linea: meta };
+      }
+    });
+  });
+  if (mejorX) {
+    objeto.left += mejorX.delta;
+    guiasVisibles.push({ tipo: "v", pos: mejorX.linea });
+  }
+
+  let mejorY = null;
+  objetivosY.forEach((meta) => {
+    [b.arr, b.centroY, b.aba].forEach((valor) => {
+      const distancia = Math.abs(valor - meta);
+      if (distancia <= UMBRAL_SNAP && (!mejorY || distancia < mejorY.distancia)) {
+        mejorY = { distancia, delta: meta - valor, linea: meta };
+      }
+    });
+  });
+  if (mejorY) {
+    objeto.top += mejorY.delta;
+    guiasVisibles.push({ tipo: "h", pos: mejorY.linea });
+  }
+
+  objeto.setCoords();
+});
+
+lienzo.on("after:render", () => {
+  if (!guiasVisibles.length) return;
+  const ctx = lienzo.getSelectionContext();
+  const retina = lienzo.getRetinaScaling();
+  ctx.save();
+  ctx.setTransform(retina, 0, 0, retina, 0, 0);
+  ctx.strokeStyle = "#ec4899";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([5, 5]);
+  guiasVisibles.forEach((guia) => {
+    ctx.beginPath();
+    if (guia.tipo === "v") {
+      ctx.moveTo(guia.pos, 0);
+      ctx.lineTo(guia.pos, ALTO);
+    } else {
+      ctx.moveTo(0, guia.pos);
+      ctx.lineTo(ANCHO, guia.pos);
+    }
+    ctx.stroke();
+  });
+  ctx.restore();
+});
+
+lienzo.on("mouse:up", () => {
+  if (guiasVisibles.length) {
+    guiasVisibles = [];
+    lienzo.requestRenderAll();
+  }
+});
+
 // ---- Utilidades de estilo ----
 
 function rgbAHex(valor) {
@@ -260,7 +356,8 @@ function textoBase(texto, opciones) {
 // Aquí sólo traducimos cada pieza a un objeto de Fabric usando los colores
 // del tema activo, para que cualquier plantilla combine con cualquier tema.
 
-let temaActivo = TEMAS[0];
+let temaActivo = TEMAS[0];   // tema elegido en el modal (para vistas previas)
+let temaAplicado = TEMAS[0]; // tema que realmente tiene la diapositiva actual
 
 function colorDelTema(nombre, tema) {
   if (!nombre) return tema.texto;
@@ -310,9 +407,53 @@ function aplicarPlantilla(plantilla, tema) {
   selectorFondo.value = tema.fondo;
   selectorColor.value = tema.texto;
   colorAcento = tema.acento;
+  temaAplicado = tema;
 
   const primerTexto = lienzo.getObjects().find((objeto) => esTexto(objeto));
   if (primerTexto) lienzo.setActiveObject(primerTexto);
+  lienzo.renderAll();
+  programarGuardado();
+}
+
+// Cambia los colores de un objeto de un tema a otro, según su "papel".
+// Ej.: lo que era del color de acento pasa al acento del tema nuevo.
+function recolorearObjeto(objeto, viejo, nuevo) {
+  const mapa = {
+    [viejo.texto.toLowerCase()]: nuevo.texto,
+    [viejo.acento.toLowerCase()]: nuevo.acento,
+    [viejo.suave.toLowerCase()]: nuevo.suave,
+    [viejo.claro.toLowerCase()]: nuevo.claro,
+  };
+  const traducir = (valor) => {
+    const hex = (rgbAHex(valor) || "").toLowerCase();
+    return mapa[hex] || valor;
+  };
+  if (objeto.type === "group") {
+    objeto.getObjects().forEach((parte) => recolorearObjeto(parte, viejo, nuevo));
+    return;
+  }
+  if (objeto.type === "line" && objeto.stroke) objeto.set("stroke", traducir(objeto.stroke));
+  if (objeto.fill) objeto.set("fill", traducir(objeto.fill));
+  if (esTexto(objeto)) {
+    if (objeto.fontFamily === viejo.fuenteTitulo) objeto.set("fontFamily", nuevo.fuenteTitulo);
+    else if (objeto.fontFamily === viejo.fuenteCuerpo) objeto.set("fontFamily", nuevo.fuenteCuerpo);
+  }
+}
+
+// Al cargar una diapositiva no sabemos su tema; lo adivinamos por el fondo.
+function detectarTemaAplicado() {
+  const fondo = (rgbAHex(lienzo.backgroundColor) || "#ffffff").toLowerCase();
+  temaAplicado = TEMAS.find((t) => t.fondo.toLowerCase() === fondo) || TEMAS[0];
+}
+
+function reaplicarTema(nuevo) {
+  const viejo = temaAplicado;
+  lienzo.getObjects().forEach((objeto) => recolorearObjeto(objeto, viejo, nuevo));
+  lienzo.backgroundColor = nuevo.fondo;
+  colorAcento = nuevo.acento;
+  selectorFondo.value = nuevo.fondo;
+  selectorColor.value = nuevo.texto;
+  temaAplicado = nuevo;
   lienzo.renderAll();
   programarGuardado();
 }
@@ -392,14 +533,9 @@ document.getElementById("boton-plantillas").addEventListener("click", async () =
   modalPlantillas.show();
 });
 
-// Cambiar sólo el tema de la diapositiva actual (fondo, textos y detalles).
+// Cambiar sólo el tema de la diapositiva actual: recolorea lo que ya está.
 document.getElementById("boton-aplicar-tema").addEventListener("click", () => {
-  lienzo.backgroundColor = temaActivo.fondo;
-  colorAcento = temaActivo.acento;
-  selectorFondo.value = temaActivo.fondo;
-  selectorColor.value = temaActivo.texto;
-  lienzo.renderAll();
-  programarGuardado();
+  reaplicarTema(temaActivo);
   modalPlantillas.hide();
 });
 
@@ -440,14 +576,55 @@ document.getElementById("boton-iconos").addEventListener("click", () => {
   modalIconos.show();
 });
 
-// ---- Insertar objetos ----
+// ---- Barra por categorías ----
+// Cada pestaña muestra su panel de opciones y esconde los demás.
+
+document.querySelectorAll(".cat-tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".cat-tab").forEach((t) => t.classList.remove("activa"));
+    tab.classList.add("activa");
+    document.querySelectorAll(".panel-categoria").forEach((panel) => {
+      panel.classList.toggle("d-none", panel.dataset.panel !== tab.dataset.cat);
+    });
+  });
+});
+
+// ---- Insertar texto ----
+// Cada objeto nuevo se coloca en el centro con un pequeño desplazamiento
+// para que no queden todos apilados exactamente en el mismo punto.
+
+let desfaseNuevo = 0;
+function posicionNueva(ancho, alto) {
+  const paso = (desfaseNuevo % 5) * 18;
+  desfaseNuevo += 1;
+  return { left: (ANCHO - ancho) / 2 + paso, top: (ALTO - alto) / 2 + paso };
+}
+
+function agregarObjeto(objeto) {
+  lienzo.add(objeto);
+  lienzo.setActiveObject(objeto);
+  lienzo.renderAll();
+}
+
+document.getElementById("boton-titulo").addEventListener("click", () => {
+  const pos = posicionNueva(600, 60);
+  agregarObjeto(textoBase("Título grande", {
+    ...pos, width: 600, fontSize: 54, fontWeight: "bold", fontFamily: "Poppins",
+  }));
+});
+
+document.getElementById("boton-subtitulo").addEventListener("click", () => {
+  const pos = posicionNueva(560, 40);
+  agregarObjeto(textoBase("Subtítulo o idea secundaria", {
+    ...pos, width: 560, fontSize: 34, fontFamily: "Poppins", fill: "#475569",
+  }));
+});
 
 document.getElementById("boton-texto").addEventListener("click", () => {
-  const texto = textoBase("Escribe aquí", {
-    left: 100, top: 100, width: 400, fontSize: Number(selectorTamano.value),
-  });
-  lienzo.add(texto);
-  lienzo.setActiveObject(texto);
+  const pos = posicionNueva(400, 40);
+  agregarObjeto(textoBase("Escribe aquí", {
+    ...pos, width: 400, fontSize: Number(selectorTamano.value),
+  }));
 });
 
 document.getElementById("boton-rectangulo").addEventListener("click", () => {
@@ -509,6 +686,64 @@ document.getElementById("entrada-imagen-archivo").addEventListener("change", (ev
   };
   lector.readAsDataURL(archivo);
   evento.target.value = "";
+});
+
+// ---- Componentes ----
+// Bloques listos (tarjeta, estadística, etc.) definidos como piezas, igual que
+// las plantillas, pero SIN borrar la diapositiva: se agregan donde haya lugar.
+// Los textos quedan sueltos a propósito, para poder editarlos al instante.
+
+const COMPONENTES = {
+  tarjeta: [
+    { tipo: "rect", x: 0, y: 0, w: 300, h: 200, color: "suave", radio: 16 },
+    { tipo: "texto", texto: "Título", x: 24, y: 26, w: 252, tam: 28, peso: "bold" },
+    { tipo: "texto", texto: "Escribe aquí una descripción corta.", x: 24, y: 78, w: 252, tam: 18 },
+  ],
+  destacado: [
+    { tipo: "rect", x: 0, y: 0, w: 420, h: 120, color: "acento", radio: 14 },
+    { tipo: "texto", texto: "💡 Idea importante que quieras resaltar", x: 24, y: 34, w: 372, tam: 24, peso: "bold", color: "claro" },
+  ],
+  estadistica: [
+    { tipo: "texto", texto: "100%", x: 0, y: 0, w: 240, tam: 72, peso: "bold", color: "acento", alinear: "center", fuente: "titulo" },
+    { tipo: "texto", texto: "explica el dato aquí", x: 0, y: 96, w: 240, tam: 20, alinear: "center" },
+  ],
+  "viñeta": [
+    { tipo: "circulo", x: 0, y: 8, r: 9, color: "acento" },
+    { tipo: "texto", texto: "Punto de la lista", x: 34, y: 0, w: 360, tam: 26 },
+  ],
+  paso: [
+    { tipo: "circulo", x: 0, y: 0, r: 26, color: "acento" },
+    { tipo: "texto", texto: "1", x: 0, y: 12, w: 52, tam: 26, peso: "bold", color: "claro", alinear: "center" },
+    { tipo: "texto", texto: "Describe este paso", x: 70, y: 8, w: 320, tam: 24, peso: "bold" },
+  ],
+  boton: [
+    { tipo: "rect", x: 0, y: 0, w: 200, h: 60, color: "acento", radio: 30 },
+    { tipo: "texto", texto: "Botón", x: 0, y: 16, w: 200, tam: 24, peso: "bold", color: "claro", alinear: "center" },
+  ],
+};
+
+function insertarComponente(nombre) {
+  const piezas = COMPONENTES[nombre];
+  if (!piezas) return;
+  const anchoAprox = Math.max(...piezas.map((p) => p.x + (p.w || p.r * 2 || 0)));
+  const altoAprox = Math.max(...piezas.map((p) => p.y + (p.h || p.r * 2 || p.tam || 0)));
+  const base = posicionNueva(anchoAprox, altoAprox);
+
+  const creados = piezas.map((pieza) => crearPieza(
+    { ...pieza, x: pieza.x + base.left, y: pieza.y + base.top },
+    temaActivo,
+  ));
+  creados.forEach((objeto) => lienzo.add(objeto));
+
+  // Dejar los objetos del componente seleccionados juntos.
+  const seleccion = new fabric.ActiveSelection(creados, { canvas: lienzo });
+  lienzo.setActiveObject(seleccion);
+  lienzo.renderAll();
+  programarGuardado();
+}
+
+document.querySelectorAll(".comp").forEach((boton) => {
+  boton.addEventListener("click", () => insertarComponente(boton.dataset.comp));
 });
 
 // ---- Estilo del objeto seleccionado ----
