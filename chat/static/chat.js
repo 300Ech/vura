@@ -202,6 +202,16 @@ function agregarMensaje(mensaje) {
   reacciones.id = "reacciones-" + mensaje.id;
   burbuja.appendChild(reacciones);
 
+  // Un solo botón "reaccionar"; el menú de emojis se abre al hacer clic.
+  const filaAcciones = document.createElement("div");
+  filaAcciones.className = "acciones-reaccion";
+
+  const botonAgregar = document.createElement("button");
+  botonAgregar.type = "button";
+  botonAgregar.className = "boton-agregar-reaccion";
+  botonAgregar.title = "Agregar reacción";
+  botonAgregar.textContent = "😊+";
+
   const menu = document.createElement("div");
   menu.className = "menu-reacciones";
   EMOJIS_REACCION.forEach((emoji) => {
@@ -209,16 +219,29 @@ function agregarMensaje(mensaje) {
     boton.type = "button";
     boton.textContent = emoji;
     boton.title = "Reaccionar con " + emoji;
-    boton.addEventListener("click", () => {
+    boton.addEventListener("click", (evento) => {
+      evento.stopPropagation();
       socket.emit("reaccionar_mensaje", {
         id_equipo: idEquipo,
         id_mensaje: mensaje.id,
         emoji: emoji,
       });
+      menu.classList.remove("abierto");
     });
     menu.appendChild(boton);
   });
-  burbuja.appendChild(menu);
+
+  botonAgregar.addEventListener("click", (evento) => {
+    evento.stopPropagation();
+    document.querySelectorAll(".menu-reacciones.abierto").forEach((otro) => {
+      if (otro !== menu) otro.classList.remove("abierto");
+    });
+    menu.classList.toggle("abierto");
+  });
+
+  filaAcciones.appendChild(botonAgregar);
+  filaAcciones.appendChild(menu);
+  burbuja.appendChild(filaAcciones);
 
   listaMensajes.appendChild(burbuja);
   dibujarReacciones(mensaje);
@@ -246,6 +269,12 @@ function dibujarReacciones(mensaje) {
     contenedor.appendChild(boton);
   });
 }
+
+document.addEventListener("click", () => {
+  document.querySelectorAll(".menu-reacciones.abierto").forEach((menu) => {
+    menu.classList.remove("abierto");
+  });
+});
 
 const visorImagen = document.getElementById("visor-imagen-chat");
 function ampliarImagen(url) {

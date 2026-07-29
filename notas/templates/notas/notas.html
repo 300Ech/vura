@@ -34,6 +34,26 @@
     background-image: none;
   }
   
+  /* Marca discreta: el navbar está oculto en la pizarra, pero se sigue viendo que es Vura. */
+  #marca-vura {
+    position: fixed;
+    top: 14px;
+    left: 16px;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'Caveat', cursive;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--border-dark, #1e293b);
+    text-decoration: none;
+    opacity: 0.55;
+    transition: opacity .15s ease;
+  }
+  #marca-vura:hover { opacity: 1; }
+
   /* Controles superiores flotantes */
   .pizarra-top-controls {
     position: fixed;
@@ -263,9 +283,50 @@
     font-size: .72rem;
   }
   #panel-chat .reaccion-panel.mia { background: #ede9fe; border-color: #8b5cf6; }
+  #panel-chat .acciones-reaccion-panel {
+    position: relative;
+    display: inline-flex;
+    margin-top: 4px;
+  }
+  #panel-chat .boton-agregar-reaccion {
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    background: white;
+    padding: 0 6px;
+    font-size: 0.72rem;
+    line-height: 1.5;
+    color: #1e293b;
+  }
+  #panel-chat .boton-agregar-reaccion:hover { background: #f1f5f9; }
+  #panel-chat .menu-reacciones-panel {
+    display: none;
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 4px);
+    gap: 2px;
+    background: white;
+    border: 2px solid #1e293b;
+    border-radius: 999px;
+    box-shadow: 3px 3px 0 rgba(0,0,0,.15);
+    padding: 4px 8px;
+    z-index: 5;
+  }
+  #panel-chat .menu-reacciones-panel.abierto { display: flex; }
+  #panel-chat .menu-reacciones-panel button {
+    border: 0;
+    background: transparent;
+    padding: 1px 3px;
+    font-size: 1rem;
+  }
+  #panel-chat .menu-reacciones-panel button:hover {
+    background: #f1f5f9;
+    border-radius: 6px;
+  }
   #emojis-chat-panel { display: none; }
   #emojis-chat-panel.abierto { display: flex; }
 </style>
+
+<span id="marca-vura" title="Vura">✨ Vura</span>
 
 <div class="pizarra-top-controls d-flex justify-content-between align-items-center flex-wrap gap-2">
   <div class="d-flex align-items-center gap-2">

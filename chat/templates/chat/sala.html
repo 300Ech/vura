@@ -20,15 +20,37 @@
     font-size: 0.8rem;
   }
   .reaccion-chat.mia { background: #ede9fe; border-color: #8b5cf6; }
-  .menu-reacciones {
-    display: flex;
-    gap: 3px;
+  .acciones-reaccion {
+    position: relative;
+    display: inline-flex;
     margin-top: 4px;
-    opacity: 0;
-    transition: opacity .15s;
   }
-  .burbuja-chat:hover .menu-reacciones { opacity: 1; }
-  .menu-reacciones button { border: 0; background: transparent; padding: 1px 3px; }
+  .boton-agregar-reaccion {
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    background: white;
+    padding: 0 7px;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: #1e293b;
+  }
+  .boton-agregar-reaccion:hover { background: #f1f5f9; }
+  .menu-reacciones {
+    display: none;
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 4px);
+    gap: 2px;
+    background: white;
+    border: 2px solid #1e293b;
+    border-radius: 999px;
+    box-shadow: 3px 3px 0 rgba(0,0,0,.15);
+    padding: 4px 8px;
+    z-index: 5;
+  }
+  .menu-reacciones.abierto { display: flex; }
+  .menu-reacciones button { border: 0; background: transparent; padding: 1px 3px; font-size: 1.05rem; }
+  .menu-reacciones button:hover { background: #f1f5f9; border-radius: 6px; }
   #selector-emojis-chat { display: none; }
   #selector-emojis-chat.abierto { display: flex; }
   #visor-imagen-chat {

@@ -14,6 +14,22 @@ const indicadorEstado = document.getElementById("estado-guardado");
 
 const lienzo = new fabric.Canvas("lienzo-pizarra", { preserveObjectStacking: true });
 
+// El lienzo nunca puede ser más chico que la ventana: si lo fuera, la pizarra
+// se vería "cortada" a la derecha y los post-its de esa franja desaparecerían.
+// Igual mantenemos un mínimo para que siempre haya espacio de sobra donde pegar.
+const ANCHO_MINIMO = 1600;
+const ALTO_MINIMO = 1000;
+const zonaPizarra = document.getElementById("zona-pizarra");
+
+function ajustarLienzo() {
+  lienzo.setWidth(Math.max(ANCHO_MINIMO, zonaPizarra.clientWidth));
+  lienzo.setHeight(Math.max(ALTO_MINIMO, zonaPizarra.clientHeight));
+  lienzo.renderAll();
+}
+
+ajustarLienzo();
+window.addEventListener("resize", ajustarLienzo);
+
 // El color elegido en la paleta se usa para post-its nuevos y para el lápiz.
 let colorActual = "#fde047"; // amarillo post-it vibrante
 
@@ -24,10 +40,36 @@ let colorActual = "#fde047"; // amarillo post-it vibrante
 
 const PostIt = fabric.util.createClass(fabric.Textbox, {
   type: "post-it",
+  // Margen interno del texto respecto al papel. Fabric.padding NO sirve:
+  // ese es el área de selección alrededor del objeto.
+  textPadding: 16,
 
   initDimensions: function () {
     this.callSuper("initDimensions");
-    this.height = Math.max(this.height, this.width);
+    const p = this.textPadding;
+    // Más alto por el padding vertical; y nunca más bajo que ancho (cuadrado).
+    this.height = Math.max(this.height + p * 2, this.width);
+  },
+
+  // El fondo crece a los lados del texto: así no queda pegado a los bordes.
+  _renderBackground: function (ctx) {
+    if (!this.backgroundColor) return;
+    const p = this.textPadding;
+    ctx.fillStyle = this.backgroundColor;
+    ctx.fillRect(
+      -this.width / 2 - p,
+      -this.height / 2,
+      this.width + p * 2,
+      this.height,
+    );
+  },
+
+  // Baja el texto para dejar margen arriba (el de abajo ya lo da initDimensions).
+  _renderText: function (ctx) {
+    ctx.save();
+    ctx.translate(0, this.textPadding);
+    this.callSuper("_renderText", ctx);
+    ctx.restore();
   },
 
   _render: function (ctx) {
@@ -39,11 +81,12 @@ const PostIt = fabric.util.createClass(fabric.Textbox, {
     if (!resumen) return;
 
     // Pie pequeño dentro del papel; forma parte del objeto y viaja con él.
+    const p = this.textPadding;
     ctx.save();
     ctx.font = "bold 15px Nunito";
     ctx.fillStyle = "#475569";
     ctx.textBaseline = "bottom";
-    ctx.fillText(resumen, -this.width / 2 + 10, this.height / 2 - 8);
+    ctx.fillText(resumen, -this.width / 2 - p + 10, this.height / 2 - 8);
     ctx.restore();
   },
 });
@@ -61,7 +104,9 @@ function crearPostIt(texto, opciones) {
     fontFamily: "Caveat",
     fill: "#1e293b",
     backgroundColor: colorActual,
-    padding: 14,
+    textPadding: 16,
+    // Fabric.padding amplía el cache para que el fondo expandido no se recorte.
+    padding: 16,
     angle: Math.random() * 6 - 3, // inclinación de -3° a +3°
     shadow: { color: "rgba(0,0,0,0.2)", blur: 4, offsetX: 4, offsetY: 5 },
     reacciones: {},
@@ -109,6 +154,13 @@ function hidratarObjeto(objeto, datos, uuid) {
   if (datos.mediaNombre) objeto.mediaNombre = datos.mediaNombre;
   if (datos.mediaDuracion) objeto.mediaDuracion = datos.mediaDuracion;
   if (datos.reacciones) objeto.reacciones = datos.reacciones;
+  // Post-its viejos no traían textPadding: se lo ponemos al hidratar.
+  if (objeto.type === "post-it") {
+    objeto.textPadding = objeto.textPadding || 16;
+    objeto.padding = Math.max(objeto.padding || 0, objeto.textPadding);
+    objeto.initDimensions();
+    objeto.setCoords();
+  }
   return objeto;
 }
 
@@ -889,21 +941,44 @@ function agregarMensajePanel(mensaje) {
   reacciones.className = "reacciones-panel";
   burbuja.appendChild(reacciones);
 
+  // Un solo botón "reaccionar"; el menú de emojis se abre al hacer clic.
+  const filaAcciones = document.createElement("div");
+  filaAcciones.className = "acciones-reaccion-panel";
+
+  const botonAgregar = document.createElement("button");
+  botonAgregar.type = "button";
+  botonAgregar.className = "boton-agregar-reaccion";
+  botonAgregar.title = "Agregar reacción";
+  botonAgregar.textContent = "😊+";
+
   const menu = document.createElement("div");
-  menu.className = "mt-1";
+  menu.className = "menu-reacciones-panel";
   emojisReaccionPanel.forEach((emoji) => {
     const boton = document.createElement("button");
     boton.type = "button";
-    boton.className = "btn btn-sm p-0 me-1";
     boton.textContent = emoji;
-    boton.addEventListener("click", () => {
+    boton.title = "Reaccionar con " + emoji;
+    boton.addEventListener("click", (evento) => {
+      evento.stopPropagation();
       socketChat.emit("reaccionar_mensaje", {
         id_equipo: idEquipo, id_mensaje: mensaje.id, emoji: emoji,
       });
+      menu.classList.remove("abierto");
     });
     menu.appendChild(boton);
   });
-  burbuja.appendChild(menu);
+
+  botonAgregar.addEventListener("click", (evento) => {
+    evento.stopPropagation();
+    document.querySelectorAll(".menu-reacciones-panel.abierto").forEach((otro) => {
+      if (otro !== menu) otro.classList.remove("abierto");
+    });
+    menu.classList.toggle("abierto");
+  });
+
+  filaAcciones.appendChild(botonAgregar);
+  filaAcciones.appendChild(menu);
+  burbuja.appendChild(filaAcciones);
 
   mensajesPanel.appendChild(burbuja);
   dibujarReaccionesPanel(mensaje);
@@ -929,3 +1004,9 @@ function dibujarReaccionesPanel(mensaje) {
     contenedor.appendChild(boton);
   });
 }
+
+document.addEventListener("click", () => {
+  document.querySelectorAll(".menu-reacciones-panel.abierto").forEach((menu) => {
+    menu.classList.remove("abierto");
+  });
+});
