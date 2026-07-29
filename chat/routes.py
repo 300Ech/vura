@@ -10,7 +10,8 @@ from werkzeug.utils import secure_filename
 
 from config import RUTA_DATOS
 from extensiones import db, socketio, hora_local
-from equipos.models import Equipo, MiembroEquipo, Proyecto
+from equipos.models import Equipo, MiembroEquipo
+from proyectos.models import Proyecto
 from chat.models import Mensaje, AdjuntoMensaje, ReaccionMensaje
 
 chat = Blueprint("chat", __name__, template_folder="templates",
