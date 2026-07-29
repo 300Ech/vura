@@ -361,22 +361,53 @@ function crearTarjetaVozIt(url, duracionSegundos) {
   publicarObjeto(grupo);
 }
 
-function crearTarjetaVideo(url, nombre) {
-  const marco = new fabric.Rect({
-    left: 0, top: 0, width: 220, height: 160,
-    fill: "#0f172a", rx: 8, ry: 8,
+// Saca un fotograma del video para usarlo como miniatura (como hace YouTube).
+function capturarFotogramaVideo(archivo) {
+  return new Promise((listo) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.muted = true;
+    video.src = URL.createObjectURL(archivo);
+
+    const rendirse = () => {
+      URL.revokeObjectURL(video.src);
+      listo(null);
+    };
+    video.addEventListener("error", rendirse);
+    video.addEventListener("loadeddata", () => {
+      // Un segundo adentro: el primer fotograma suele estar en negro.
+      video.currentTime = Math.min(1, (video.duration || 2) / 2);
+    });
+    video.addEventListener("seeked", () => {
+      const proporcion = video.videoHeight / video.videoWidth || 0.5625;
+      const lienzoFoto = document.createElement("canvas");
+      lienzoFoto.width = 320;
+      lienzoFoto.height = Math.round(320 * proporcion);
+      lienzoFoto.getContext("2d").drawImage(video, 0, 0, lienzoFoto.width, lienzoFoto.height);
+      lienzoFoto.toBlob((blob) => {
+        URL.revokeObjectURL(video.src);
+        listo(blob);
+      }, "image/jpeg", 0.72);
+    });
   });
+}
+
+function armarTarjetaVideo(url, nombre, partes, ancho, alto) {
+  // Botón de play centrado sobre la miniatura.
+  const radio = 34;
   const play = new fabric.Circle({
-    left: 75, top: 40, radius: 32, fill: "#fde047",
+    left: ancho / 2 - radio, top: alto / 2 - radio - 10, radius: radio,
+    fill: "rgba(255,255,255,0.92)", stroke: "#0f172a", strokeWidth: 2,
   });
   const triangulo = new fabric.Triangle({
-    left: 98, top: 55, width: 24, height: 22, angle: 90, fill: "#0f172a",
+    left: ancho / 2 + 13, top: alto / 2 - 24, width: 26, height: 24,
+    angle: 90, fill: "#0f172a",
   });
   const etiqueta = new fabric.Textbox(nombre || "Video", {
-    left: 12, top: 120, width: 196, fontSize: 16, fontFamily: "Nunito",
-    fill: "#e2e8f0", textAlign: "center",
+    left: 10, top: alto - 30, width: ancho - 20, fontSize: 15,
+    fontFamily: "Nunito", fill: "#e2e8f0", textAlign: "center",
   });
-  const grupo = new fabric.Group([marco, play, triangulo, etiqueta], {
+  const grupo = new fabric.Group([...partes, play, triangulo, etiqueta], {
     ...posicionAleatoria(),
     angle: Math.random() * 4 - 2,
     shadow: sombraPolaroid(),
@@ -388,6 +419,34 @@ function crearTarjetaVideo(url, nombre) {
   lienzo.setActiveObject(grupo);
   ordenarCapas();
   publicarObjeto(grupo);
+}
+
+function crearTarjetaVideo(url, nombre, urlMiniatura) {
+  if (!urlMiniatura) {
+    const ancho = 240;
+    const alto = 170;
+    const marco = new fabric.Rect({
+      left: 0, top: 0, width: ancho, height: alto, fill: "#0f172a", rx: 8, ry: 8,
+    });
+    armarTarjetaVideo(url, nombre, [marco], ancho, alto);
+    return;
+  }
+
+  fabric.Image.fromURL(urlMiniatura, (miniatura) => {
+    const ancho = 260;
+    miniatura.scaleToWidth(ancho);
+    const alto = miniatura.getScaledHeight() + 34; // espacio para el nombre
+    const marco = new fabric.Rect({
+      left: 0, top: 0, width: ancho, height: alto, fill: "#0f172a", rx: 8, ry: 8,
+    });
+    miniatura.set({ left: 0, top: 0 });
+    // Velo oscuro para que el botón de play resalte sobre cualquier imagen.
+    const velo = new fabric.Rect({
+      left: 0, top: 0, width: ancho, height: miniatura.getScaledHeight(),
+      fill: "rgba(15,23,42,0.28)",
+    });
+    armarTarjetaVideo(url, nombre, [marco, miniatura, velo], ancho, alto);
+  }, { crossOrigin: "anonymous" });
 }
 
 document.getElementById("boton-foto").addEventListener("click", () => {
@@ -421,7 +480,16 @@ document.getElementById("entrada-video").addEventListener("change", async (event
   try {
     indicadorEstado.textContent = "Subiendo video...";
     const subida = await subirMedio(archivo, "video");
-    crearTarjetaVideo(subida.url, subida.nombre.replace(/\.[^.]+$/, "").slice(0, 28));
+
+    // La miniatura se sube como una imagen normal, así los compañeros la ven igual.
+    let urlMiniatura = null;
+    const fotograma = await capturarFotogramaVideo(archivo);
+    if (fotograma) {
+      const archivoMiniatura = new File([fotograma], `miniatura-${Date.now()}.jpg`, { type: "image/jpeg" });
+      urlMiniatura = (await subirMedio(archivoMiniatura, "imagen")).url;
+    }
+
+    crearTarjetaVideo(subida.url, subida.nombre.replace(/\.[^.]+$/, "").slice(0, 28), urlMiniatura);
   } catch (error) {
     alert(error.message);
     indicadorEstado.textContent = "";

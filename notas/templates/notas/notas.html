@@ -13,6 +13,12 @@
     border-radius: 0 !important;
     background: transparent !important;
   }
+  /* La pizarra no debe "levantarse" al pasar el cursor como el resto de tarjetas:
+     ese desplazamiento hacía parpadear todo el lienzo. */
+  #notas, #notas:hover {
+    transform: none !important;
+    transition: none !important;
+  }
   #notas .card-body {
     padding: 0 !important;
   }
@@ -32,7 +38,7 @@
   .pizarra-top-controls {
     position: fixed;
     top: 16px;
-    left: 80px; /* Deja espacio para el dock lateral */
+    left: 110px; /* Deja espacio para el dock lateral con etiquetas */
     right: 16px;
     z-index: 1000;
     pointer-events: none; /* Clics pasan al lienzo */
@@ -155,23 +161,34 @@
     transform: translateY(-50%);
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
     background: white;
     border: var(--border-thickness, 2px) solid var(--border-dark, #1e293b);
-    border-radius: 12px;
+    border-radius: 14px;
     box-shadow: var(--shadow-solid, 4px 4px 0 rgba(0, 0, 0, 0.15));
     padding: 8px 6px;
     z-index: 1000;
   }
   #dock-pizarra a, #dock-pizarra button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 62px;
     border: none;
     background: none;
-    font-size: 1.25rem;
-    text-align: center;
+    color: #1e293b;
     text-decoration: none;
-    border-radius: 8px;
-    padding: 6px 8px;
+    border-radius: 10px;
+    padding: 6px 4px 4px;
     line-height: 1;
+    font-family: inherit;
+  }
+  #dock-pizarra .icono { font-size: 1.2rem; line-height: 1; }
+  #dock-pizarra .etiqueta {
+    font-size: 0.66rem;
+    font-weight: 800;
+    line-height: 1.1;
   }
   #dock-pizarra a:hover, #dock-pizarra button:hover {
     background: var(--sticky-yellow, #fde047);
@@ -223,12 +240,24 @@
 
 {# Dock lateral: todo el proyecto gira en torno a la pizarra. #}
 <div id="dock-pizarra">
-  <button id="boton-panel-chat" type="button" title="Chat del equipo">💬</button>
-  <a href="{{ url_for('chat.llamada', id_equipo=proyecto.equipo.id) }}" title="Videollamada">📹</a>
-  <a href="{{ url_for('tareas.tablero', id_proyecto=proyecto.id) }}" title="Tareas">🗂️</a>
-  <a href="{{ url_for('presentaciones.editor', id_proyecto=proyecto.id) }}" title="Presentación">🖼️</a>
-  <a href="{{ url_for('proyectos.ver_proyecto', id_proyecto=proyecto.id) }}" title="Ver proyecto">📁</a>
-  <a href="{{ url_for('equipos.ver_equipo', id_equipo=proyecto.equipo.id) }}" title="Equipo">👥</a>
+  <button id="boton-panel-chat" type="button" title="Chat del equipo">
+    <span class="icono">💬</span><span class="etiqueta">Chat</span>
+  </button>
+  <a href="{{ url_for('chat.llamada', id_equipo=proyecto.equipo.id) }}" title="Videollamada">
+    <span class="icono">📹</span><span class="etiqueta">Llamada</span>
+  </a>
+  <a href="{{ url_for('tareas.tablero', id_proyecto=proyecto.id) }}" title="Tareas">
+    <span class="icono">🗂️</span><span class="etiqueta">Tareas</span>
+  </a>
+  <a href="{{ url_for('presentaciones.editor', id_proyecto=proyecto.id) }}" title="Presentación">
+    <span class="icono">🖼️</span><span class="etiqueta">Diapos</span>
+  </a>
+  <a href="{{ url_for('proyectos.ver_proyecto', id_proyecto=proyecto.id) }}" title="Ver proyecto">
+    <span class="icono">📁</span><span class="etiqueta">Proyecto</span>
+  </a>
+  <a href="{{ url_for('equipos.ver_equipo', id_equipo=proyecto.equipo.id) }}" title="Equipo">
+    <span class="icono">👥</span><span class="etiqueta">Equipo</span>
+  </a>
 </div>
 
 {# Panel de chat sobre la pizarra: chateás sin dejar de ver los post-its. #}
