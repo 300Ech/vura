@@ -109,7 +109,45 @@
     color: #64748b;
     font-size: 0.85rem;
   }
+
+  @media (max-width: 768px) {
+    #editor-presentacion {
+      --slide-w: min(960px, calc(100vw - 24px));
+    }
+    .marco-lienzo {
+      width: var(--slide-w);
+      max-width: 100%;
+    }
+    /* Miniaturas en fila horizontal arriba del lienzo. */
+    #editor-presentacion .layout-editor {
+      flex-direction: column;
+    }
+    #panel-diapositivas {
+      width: 100%;
+      max-height: none;
+      flex-direction: row !important;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 6px;
+      -webkit-overflow-scrolling: touch;
+    }
+    #panel-diapositivas .miniatura {
+      width: 110px;
+      flex-shrink: 0;
+    }
+    .barra-herramientas {
+      max-height: 38vh;
+      overflow-y: auto;
+    }
+    #ayuda-presentacion { display: none; }
+    #aviso-diapos-movil { margin-bottom: 10px; }
+  }
 </style>
+
+<div id="aviso-diapos-movil" class="aviso-movil-light">
+  <span>📱 Las diapos se editan mejor en una computadora. Acá podés presentarlas o hacer cambios chicos.</span>
+  <button type="button" aria-label="Cerrar" onclick="this.parentElement.remove()">×</button>
+</div>
 
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
@@ -192,7 +230,7 @@
     </div>
   </div>
 
-  <div class="d-flex gap-2 align-items-start">
+  <div class="layout-editor d-flex gap-2 align-items-start">
     <div id="panel-diapositivas" class="d-flex flex-column gap-2 flex-shrink-0"></div>
 
     <div class="flex-grow-1">

@@ -24,6 +24,18 @@ const lienzo = new fabric.Canvas("lienzo", {
   selection: true,
 });
 
+// En pantallas chicas el lienzo se ve a escala, sin cambiar sus 960×540 reales.
+const marcoLienzo = document.querySelector(".marco-lienzo");
+function ajustarEscalaEditor() {
+  if (!marcoLienzo) return;
+  const padre = marcoLienzo.parentElement;
+  const escala = Math.min(1, (padre.clientWidth - 8) / ANCHO);
+  marcoLienzo.style.transformOrigin = "top left";
+  marcoLienzo.style.transform = `scale(${escala})`;
+  padre.style.height = `${ALTO * escala + 8}px`;
+}
+ajustarEscalaEditor();
+
 // diapositivas = [{ id, contenido }] en el orden actual.
 let diapositivas = diapositivasIniciales.map((d) => ({ id: d.id, contenido: d.contenido }));
 let indiceActual = 0;
@@ -697,6 +709,7 @@ capaPresentacion.addEventListener("click", (evento) => {
 });
 
 window.addEventListener("resize", () => {
+  ajustarEscalaEditor();
   if (presentando) ajustarTamanoPresentacion();
 });
 

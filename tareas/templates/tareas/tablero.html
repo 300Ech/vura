@@ -2,7 +2,7 @@
 {% block titulo %}Tareas de {{ proyecto.nombre }}{% endblock %}
 
 {% block contenido %}
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="cabecera-tareas d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
     <h1 class="h4 mb-0">Tareas de «{{ proyecto.nombre }}»</h1>
     <a class="text-muted small" href="{{ url_for('proyectos.ver_proyecto', id_proyecto=proyecto.id) }}">
@@ -15,7 +15,31 @@
   </div>
 </div>
 
-<div class="row g-3">
+<style>
+  @media (max-width: 768px) {
+    /* Tablero: columnas en fila con scroll horizontal (estilo Trello móvil). */
+    .tablero-movil {
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      gap: 12px;
+      padding-bottom: 12px;
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x mandatory;
+    }
+    .tablero-movil > [class*="col-"] {
+      flex: 0 0 82vw;
+      max-width: 82vw;
+      scroll-snap-align: start;
+    }
+    .tablero-movil .card-body {
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+  }
+</style>
+
+<div class="row g-3 tablero-movil">
   {% for estado, lista in columnas.items() %}
     <div class="col-md-4">
       <div class="card shadow-sm h-100">
