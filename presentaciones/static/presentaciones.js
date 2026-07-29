@@ -3,6 +3,7 @@
 // gana el último cambio de esa diapositiva (y Yjs deja a todos con la misma versión).
 import * as Y from "https://cdn.jsdelivr.net/npm/yjs@13.6.14/+esm";
 import { conectarDocumento } from "/colaboracion/static/colaboracion.js";
+import { TEMAS, PLANTILLAS, ICONOS } from "/presentaciones/static/plantillas.js";
 
 const contenedorEditor = document.getElementById("editor-presentacion");
 const diapositivasIniciales = JSON.parse(document.getElementById("datos-diapositivas").textContent);
@@ -254,133 +255,189 @@ function textoBase(texto, opciones) {
   });
 }
 
-// ---- Plantillas ----
-// Cada plantilla limpia la diapositiva y deja un diseño listo para editar.
-// Son composiciones simples de objetos de Fabric (fácil de explicar en la feria).
+// ---- Temas y plantillas ----
+// Las plantillas viven en plantillas.js como listas de "piezas" (datos).
+// Aquí sólo traducimos cada pieza a un objeto de Fabric usando los colores
+// del tema activo, para que cualquier plantilla combine con cualquier tema.
 
-function limpiarYFondo(fondo) {
+let temaActivo = TEMAS[0];
+
+function colorDelTema(nombre, tema) {
+  if (!nombre) return tema.texto;
+  if (nombre.startsWith("#")) return nombre;
+  return tema[nombre] || nombre;
+}
+
+function crearPieza(pieza, tema) {
+  const relleno = colorDelTema(pieza.color, tema);
+  if (pieza.tipo === "rect") {
+    return new fabric.Rect({
+      left: pieza.x, top: pieza.y, width: pieza.w, height: pieza.h,
+      fill: relleno, opacity: pieza.opacidad ?? 1,
+      rx: pieza.radio || 0, ry: pieza.radio || 0,
+    });
+  }
+  if (pieza.tipo === "circulo") {
+    return new fabric.Circle({
+      left: pieza.x, top: pieza.y, radius: pieza.r,
+      fill: relleno, opacity: pieza.opacidad ?? 1,
+    });
+  }
+  if (pieza.tipo === "linea") {
+    return new fabric.Rect({
+      left: pieza.x, top: pieza.y, width: pieza.w, height: pieza.grosor,
+      fill: relleno, rx: pieza.grosor / 2, ry: pieza.grosor / 2,
+    });
+  }
+  return new fabric.Textbox(pieza.texto, {
+    left: pieza.x, top: pieza.y, width: pieza.w,
+    fontSize: pieza.tam,
+    fontWeight: pieza.peso || "normal",
+    fontStyle: pieza.cursiva ? "italic" : "normal",
+    textAlign: pieza.alinear || "left",
+    fill: colorDelTema(pieza.color || "texto", tema),
+    opacity: pieza.opacidad ?? 1,
+    fontFamily: pieza.fuente === "titulo" ? tema.fuenteTitulo : tema.fuenteCuerpo,
+    lineHeight: 1.2,
+  });
+}
+
+function aplicarPlantilla(plantilla, tema) {
   lienzo.clear();
-  lienzo.backgroundColor = fondo || selectorFondo.value || "#ffffff";
-  selectorFondo.value = rgbAHex(lienzo.backgroundColor) || "#ffffff";
-}
+  lienzo.backgroundColor = tema.fondo;
+  plantilla.piezas.forEach((pieza) => lienzo.add(crearPieza(pieza, tema)));
 
-function aplicarPlantillaPortada() {
-  limpiarYFondo(selectorFondo.value);
-  const banda = new fabric.Rect({
-    left: 0, top: 360, width: ANCHO, height: 180,
-    fill: colorAcento, selectable: true,
-  });
-  const titulo = textoBase("Título de la presentación", {
-    left: 60, top: 400, width: 840, fontSize: 56, fontWeight: "bold", fill: "#ffffff",
-  });
-  const subtitulo = textoBase("Subtítulo · nombres del equipo", {
-    left: 60, top: 475, width: 840, fontSize: 28, fill: "#ffffff",
-  });
-  const decoracion = new fabric.Circle({
-    left: 720, top: 40, radius: 90, fill: colorAcento, opacity: 0.25,
-  });
-  lienzo.add(decoracion, banda, titulo, subtitulo);
-  lienzo.setActiveObject(titulo);
+  selectorFondo.value = tema.fondo;
+  selectorColor.value = tema.texto;
+  colorAcento = tema.acento;
+
+  const primerTexto = lienzo.getObjects().find((objeto) => esTexto(objeto));
+  if (primerTexto) lienzo.setActiveObject(primerTexto);
   lienzo.renderAll();
   programarGuardado();
 }
 
-function aplicarPlantillaLista() {
-  limpiarYFondo(selectorFondo.value);
-  const barra = new fabric.Rect({
-    left: 0, top: 0, width: 18, height: ALTO, fill: colorAcento,
-  });
-  const titulo = textoBase("Tema de la diapositiva", {
-    left: 60, top: 40, width: 840, fontSize: 42, fontWeight: "bold",
-  });
-  const items = [
-    "• Primer punto importante",
-    "• Segundo punto importante",
-    "• Tercer punto importante",
-    "• Cuarto punto (opcional)",
-  ];
-  lienzo.add(barra, titulo);
-  items.forEach((item, i) => {
-    lienzo.add(textoBase(item, {
-      left: 70, top: 130 + i * 70, width: 820, fontSize: 30,
-    }));
-  });
-  lienzo.setActiveObject(titulo);
-  lienzo.renderAll();
-  programarGuardado();
+// ---- Galería visual de plantillas ----
+// Cada tarjeta muestra la plantilla dibujada de verdad, con el tema elegido.
+
+const galeria = document.getElementById("galeria-plantillas");
+const listaTemas = document.getElementById("lista-temas");
+const lienzoVistaPrevia = new fabric.StaticCanvas(document.createElement("canvas"), {
+  width: ANCHO, height: ALTO,
+});
+
+function vistaPreviaPlantilla(plantilla, tema) {
+  lienzoVistaPrevia.clear();
+  lienzoVistaPrevia.backgroundColor = tema.fondo;
+  plantilla.piezas.forEach((pieza) => lienzoVistaPrevia.add(crearPieza(pieza, tema)));
+  lienzoVistaPrevia.renderAll();
+  return lienzoVistaPrevia.toDataURL({ format: "jpeg", quality: 0.8, multiplier: 0.28 });
 }
 
-function aplicarPlantillaColumnas() {
-  limpiarYFondo(selectorFondo.value);
-  const titulo = textoBase("Comparación / ideas", {
-    left: 50, top: 30, width: 860, fontSize: 40, fontWeight: "bold", textAlign: "center",
+function dibujarGaleria() {
+  galeria.innerHTML = "";
+  PLANTILLAS.forEach((plantilla) => {
+    const tarjeta = document.createElement("button");
+    tarjeta.type = "button";
+    tarjeta.className = "tarjeta-plantilla";
+
+    const imagen = document.createElement("img");
+    imagen.src = vistaPreviaPlantilla(plantilla, temaActivo);
+    imagen.alt = plantilla.nombre;
+
+    const nombre = document.createElement("span");
+    nombre.className = "nombre-plantilla";
+    nombre.textContent = plantilla.nombre;
+
+    tarjeta.append(imagen, nombre);
+    tarjeta.addEventListener("click", () => {
+      const hayContenido = lienzo.getObjects().length > 0;
+      if (hayContenido && !confirm(`¿Reemplazar esta diapositiva por la plantilla «${plantilla.nombre}»?`)) return;
+      aplicarPlantilla(plantilla, temaActivo);
+      modalPlantillas.hide();
+    });
+    galeria.appendChild(tarjeta);
   });
-  const cajaIzq = new fabric.Rect({
-    left: 50, top: 110, width: 400, height: 360,
-    fill: colorAcento, opacity: 0.12, rx: 12, ry: 12,
-  });
-  const cajaDer = new fabric.Rect({
-    left: 510, top: 110, width: 400, height: 360,
-    fill: colorAcento, opacity: 0.12, rx: 12, ry: 12,
-  });
-  const colIzq = textoBase("Columna A\n\n• Idea 1\n• Idea 2\n• Idea 3", {
-    left: 70, top: 130, width: 360, fontSize: 26,
-  });
-  const colDer = textoBase("Columna B\n\n• Idea 1\n• Idea 2\n• Idea 3", {
-    left: 530, top: 130, width: 360, fontSize: 26,
-  });
-  lienzo.add(titulo, cajaIzq, cajaDer, colIzq, colDer);
-  lienzo.setActiveObject(titulo);
-  lienzo.renderAll();
-  programarGuardado();
 }
 
-function aplicarPlantillaCita() {
-  limpiarYFondo(selectorFondo.value);
-  const comillas = textoBase("“", {
-    left: 60, top: 80, width: 120, fontSize: 140, fill: colorAcento, fontFamily: "Georgia",
+function dibujarTemas() {
+  listaTemas.innerHTML = "";
+  TEMAS.forEach((tema) => {
+    const boton = document.createElement("button");
+    boton.type = "button";
+    boton.className = "chip-tema" + (tema.id === temaActivo.id ? " activo" : "");
+    boton.style.background = tema.fondo;
+    boton.style.color = tema.texto;
+
+    const punto = document.createElement("span");
+    punto.className = "punto-acento";
+    punto.style.background = tema.acento;
+
+    boton.append(punto, document.createTextNode(tema.nombre));
+    boton.addEventListener("click", () => {
+      temaActivo = tema;
+      dibujarTemas();
+      dibujarGaleria();
+    });
+    listaTemas.appendChild(boton);
   });
-  const cita = textoBase("Escribe aquí una idea clave\no una conclusión del equipo.", {
-    left: 120, top: 180, width: 720, fontSize: 40, fontStyle: "italic", textAlign: "center",
-  });
-  const autor = textoBase("— Nombre o fuente", {
-    left: 120, top: 420, width: 720, fontSize: 24, textAlign: "right", fill: "#64748b",
-  });
-  lienzo.add(comillas, cita, autor);
-  lienzo.setActiveObject(cita);
-  lienzo.renderAll();
-  programarGuardado();
 }
 
-document.getElementById("plantilla-portada").addEventListener("click", () => {
-  if (lienzo.getObjects().length && !confirm("¿Reemplazar el contenido de esta diapositiva por la plantilla Portada?")) return;
-  aplicarPlantillaPortada();
-});
-document.getElementById("plantilla-lista").addEventListener("click", () => {
-  if (lienzo.getObjects().length && !confirm("¿Reemplazar el contenido por la plantilla Lista?")) return;
-  aplicarPlantillaLista();
-});
-document.getElementById("plantilla-columnas").addEventListener("click", () => {
-  if (lienzo.getObjects().length && !confirm("¿Reemplazar el contenido por la plantilla 2 columnas?")) return;
-  aplicarPlantillaColumnas();
-});
-document.getElementById("plantilla-cita").addEventListener("click", () => {
-  if (lienzo.getObjects().length && !confirm("¿Reemplazar el contenido por la plantilla Cita?")) return;
-  aplicarPlantillaCita();
+const modalPlantillas = new bootstrap.Modal(document.getElementById("modal-plantillas"));
+document.getElementById("boton-plantillas").addEventListener("click", async () => {
+  // Sin esperar las tipografías, Fabric mide el texto con la fuente de repuesto.
+  await document.fonts.ready;
+  dibujarTemas();
+  dibujarGaleria();
+  modalPlantillas.show();
 });
 
-// Temas rápidos de fondo + color de acento para las plantillas.
-document.querySelectorAll(".tema-fondo").forEach((boton) => {
-  boton.addEventListener("click", () => {
-    document.querySelectorAll(".tema-fondo").forEach((b) => b.classList.remove("activo"));
-    boton.classList.add("activo");
-    colorAcento = boton.dataset.acento;
-    selectorFondo.value = boton.dataset.fondo;
-    selectorColor.value = boton.dataset.fondo === "#0f172a" ? "#ffffff" : "#1e293b";
-    lienzo.backgroundColor = boton.dataset.fondo;
+// Cambiar sólo el tema de la diapositiva actual (fondo, textos y detalles).
+document.getElementById("boton-aplicar-tema").addEventListener("click", () => {
+  lienzo.backgroundColor = temaActivo.fondo;
+  colorAcento = temaActivo.acento;
+  selectorFondo.value = temaActivo.fondo;
+  selectorColor.value = temaActivo.texto;
+  lienzo.renderAll();
+  programarGuardado();
+  modalPlantillas.hide();
+});
+
+// ---- Galería de iconos (Bootstrap Icons, licencia MIT) ----
+
+const galeriaIconos = document.getElementById("galeria-iconos");
+const modalIconos = new bootstrap.Modal(document.getElementById("modal-iconos"));
+
+async function insertarIcono(nombre) {
+  const respuesta = await fetch(`https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/${nombre}.svg`);
+  const svg = await respuesta.text();
+  fabric.loadSVGFromString(svg, (objetos, opciones) => {
+    const icono = fabric.util.groupSVGElements(objetos, opciones);
+    icono.set({ left: 380, top: 200, fill: selectorColor.value });
+    icono.scaleToWidth(120);
+    lienzo.add(icono);
+    lienzo.setActiveObject(icono);
     lienzo.renderAll();
     programarGuardado();
   });
+}
+
+document.getElementById("boton-iconos").addEventListener("click", () => {
+  if (!galeriaIconos.childElementCount) {
+    ICONOS.forEach((nombre) => {
+      const boton = document.createElement("button");
+      boton.type = "button";
+      boton.className = "boton-icono";
+      boton.title = nombre.replace(/-/g, " ");
+      boton.innerHTML = `<i class="bi bi-${nombre}"></i>`;
+      boton.addEventListener("click", () => {
+        insertarIcono(nombre);
+        modalIconos.hide();
+      });
+      galeriaIconos.appendChild(boton);
+    });
+  }
+  modalIconos.show();
 });
 
 // ---- Insertar objetos ----

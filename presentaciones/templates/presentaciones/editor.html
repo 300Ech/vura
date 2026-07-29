@@ -2,10 +2,75 @@
 {% block titulo %}Presentación de {{ proyecto.nombre }}{% endblock %}
 
 {% block contenido %}
+{# Iconos MIT para insertar en las diapositivas y tipografías de los temas. #}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   #editor-presentacion {
     --slide-w: 960px;
   }
+  /* Galería de plantillas */
+  .galeria-plantillas {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 14px;
+  }
+  .tarjeta-plantilla {
+    display: block;
+    padding: 0;
+    background: white;
+    border: 2px solid var(--border-dark, #1e293b);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.12);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .tarjeta-plantilla:hover {
+    transform: translateY(-3px);
+    box-shadow: 5px 5px 0 rgba(139, 92, 246, 0.35);
+  }
+  .tarjeta-plantilla img { display: block; width: 100%; }
+  .nombre-plantilla {
+    display: block;
+    padding: 6px 10px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    text-align: left;
+    border-top: 2px solid var(--border-dark, #1e293b);
+  }
+  /* Chips de tema */
+  .chip-tema {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 2px solid var(--border-dark, #1e293b);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-weight: 800;
+    font-size: 0.85rem;
+  }
+  .chip-tema.activo { outline: 3px solid var(--primary-btn, #8b5cf6); outline-offset: 2px; }
+  .punto-acento {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid rgba(30,41,59,.4);
+  }
+  /* Galería de iconos */
+  .galeria-iconos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 8px;
+  }
+  .boton-icono {
+    aspect-ratio: 1;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    background: white;
+    font-size: 1.5rem;
+    color: #1e293b;
+  }
+  .boton-icono:hover { border-color: var(--primary-btn, #8b5cf6); background: #f8fafc; }
   #panel-diapositivas {
     width: 180px;
     max-height: 72vh;
@@ -167,18 +232,9 @@
 <div id="editor-presentacion" data-id-presentacion="{{ presentacion.id }}" data-id-proyecto="{{ proyecto.id }}">
   <div class="barra-herramientas mb-2">
     <div class="grupo-herramientas mb-2">
-      <span class="etiqueta-grupo">Plantilla</span>
-      <button id="plantilla-portada" class="btn btn-sm btn-outline-primary" type="button" title="Borra el contenido actual y aplica la plantilla">Portada</button>
-      <button id="plantilla-lista" class="btn btn-sm btn-outline-primary" type="button">Lista</button>
-      <button id="plantilla-columnas" class="btn btn-sm btn-outline-primary" type="button">2 columnas</button>
-      <button id="plantilla-cita" class="btn btn-sm btn-outline-primary" type="button">Cita</button>
-      <span class="vr mx-1"></span>
-      <span class="etiqueta-grupo">Tema</span>
-      <button class="tema-fondo activo" type="button" data-fondo="#ffffff" data-acento="#8b5cf6" style="background:#ffffff" title="Claro"></button>
-      <button class="tema-fondo" type="button" data-fondo="#0f172a" data-acento="#fde047" style="background:#0f172a" title="Oscuro"></button>
-      <button class="tema-fondo" type="button" data-fondo="#ede9fe" data-acento="#7c3aed" style="background:#ede9fe" title="Violeta"></button>
-      <button class="tema-fondo" type="button" data-fondo="#ecfdf5" data-acento="#059669" style="background:#ecfdf5" title="Verde"></button>
-      <button class="tema-fondo" type="button" data-fondo="#fff7ed" data-acento="#ea580c" style="background:#fff7ed" title="Naranja"></button>
+      <span class="etiqueta-grupo">Diseño</span>
+      <button id="boton-plantillas" class="btn btn-sm btn-primary" type="button">🎨 Plantillas y temas</button>
+      <button id="boton-iconos" class="btn btn-sm btn-outline-primary" type="button">⭐ Iconos</button>
     </div>
 
     <div class="grupo-herramientas mb-2">
@@ -198,6 +254,7 @@
       <span class="etiqueta-grupo">Estilo</span>
       <select id="selector-fuente" class="form-select form-select-sm" style="width: auto;" title="Fuente">
         <option value="Nunito" selected>Nunito</option>
+        <option value="Poppins">Poppins</option>
         <option value="Caveat">Caveat</option>
         <option value="Arial">Arial</option>
         <option value="Georgia">Georgia</option>
@@ -245,6 +302,47 @@
         <button id="boton-mover-izquierda" class="btn btn-sm btn-outline-secondary" type="button" title="Mover antes">←</button>
         <button id="boton-mover-derecha" class="btn btn-sm btn-outline-secondary" type="button" title="Mover después">→</button>
         <button id="boton-borrar-diapositiva" class="btn btn-sm btn-outline-danger" type="button">Borrar diapositiva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modal-plantillas" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="h5 mb-0">🎨 Plantillas y temas</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
+          <span class="etiqueta-grupo">Tema</span>
+          <div id="lista-temas" class="d-flex flex-wrap gap-2"></div>
+          <button id="boton-aplicar-tema" class="btn btn-sm btn-outline-secondary ms-auto" type="button">
+            Aplicar sólo el tema a esta diapositiva
+          </button>
+        </div>
+        <p class="text-muted small">
+          Elegí un tema y después una plantilla. La plantilla reemplaza el contenido de la diapositiva actual.
+        </p>
+        <div id="galeria-plantillas" class="galeria-plantillas"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modal-iconos" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="h5 mb-0">⭐ Iconos</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small">
+          Iconos de Bootstrap Icons (licencia MIT). Se insertan con el color que tengas elegido en «Color».
+        </p>
+        <div id="galeria-iconos" class="galeria-iconos"></div>
       </div>
     </div>
   </div>
