@@ -12,14 +12,14 @@
     {% if membresias %}
       <div class="d-flex flex-column gap-3">
         {% for membresia in membresias %}
-          <a class="card text-decoration-none bg-sticky-pink" href="{{ url_for('equipos.ver_equipo', id_equipo=membresia.equipo.id) }}">
+          <a class="card text-decoration-none bg-sticky-pink tilt-left" href="{{ url_for('equipos.ver_equipo', id_equipo=membresia.equipo.id) }}">
             <div class="card-body d-flex justify-content-between align-items-center">
               <div>
                 <strong class="text-dark">{{ membresia.equipo.nombre }}</strong>
                 <div class="text-muted small mt-1">{{ membresia.equipo.miembros | length }} miembro(s)</div>
               </div>
               {% if membresia.equipo.id_lider == current_user.id %}
-                <span class="badge bg-primary">Líder</span>
+                <span class="badge bg-secondary badge-vura-lider tilt-right">Líder</span>
               {% endif %}
             </div>
           </a>
@@ -36,7 +36,7 @@
   </div>
 
   <div class="col-md-4">
-    <div class="card bg-sticky-green">
+    <div class="card card-tape bg-sticky-green tilt-right">
       <div class="card-body">
         <h2 class="h6 mb-3">🎟️ Unirme a un equipo</h2>
         <form method="post" action="{{ url_for('equipos.unirse_equipo') }}">

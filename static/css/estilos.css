@@ -1,24 +1,34 @@
 :root {
-  /* FigJam-like Colors */
-  --bg-color: #f3f4f6; /* Light gray for background */
-  --dot-color: #d1d5db; /* Gray dots */
+  /* Fondo canvas FigJam */
+  --bg-color: #f3f4f6;
+  --dot-color: #d1d5db;
   
-  /* Sticky Note Colors (Pastels) */
-  --sticky-yellow: #fde047; /* Bright pastel yellow */
-  --sticky-purple: #d8b4fe; /* Pastel purple */
-  --sticky-blue: #93c5fd;   /* Pastel blue */
-  --sticky-pink: #f9a8d4;   /* Pastel pink */
-  --sticky-green: #86efac;  /* Pastel green */
-  --sticky-orange: #fdba74; /* Pastel orange */
+  /* Tinta oscura para Bordes y Sombras Neo-brutalistas */
+  --border-dark: #1e1b4b;
   
-  /* UI Elements */
-  --border-dark: #1e293b;
-  --primary-btn: #8b5cf6; /* Vibrant violet for main buttons */
+  /* Post-it Sticky Pasteles Vibrantes */
+  --sticky-yellow: #fef08a;
+  --sticky-purple: #e9d5ff;
+  --sticky-blue: #bae6fd;
+  --sticky-pink: #fbcfe8;
+  --sticky-green: #bbf7d0;
+  --sticky-orange: #fed7aa;
+  --sticky-coral: #fecdd3;
+  --sticky-paper: #fdfaf5;
   
-  /* Styling tokens */
-  --shadow-solid: 4px 4px 0px rgba(0, 0, 0, 0.15);
-  --shadow-solid-hover: 6px 6px 0px rgba(0, 0, 0, 0.2);
-  --border-thickness: 2px;
+  /* UI Tokens */
+  --border-thickness: 2.5px;
+  --primary-btn: #8b5cf6;
+  
+  /* Sombras Duras Neo-brutalistas / FigJam */
+  --shadow-hard-sm: 2px 2px 0px var(--border-dark);
+  --shadow-hard: 4px 4px 0px var(--border-dark);
+  --shadow-hard-lg: 7px 7px 0px var(--border-dark);
+  
+  /* Border Radius */
+  --radius-card: 6px 18px 14px 18px; /* Forma asimétrica de post-it */
+  --radius-btn: 10px;
+  --radius-pill: 999px;
 }
 
 body {
@@ -28,7 +38,7 @@ body {
   background-image: radial-gradient(var(--dot-color) 2px, transparent 0);
   background-size: 30px 30px;
   background-position: -15px -15px; /* Offset to center dots */
-  color: #1e293b;
+  color: var(--border-dark);
 }
 
 /* Tipografía a mano para títulos */
@@ -38,42 +48,54 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
   letter-spacing: 0.5px;
 }
 
-/* Tarjetas tipo "Sticky Note" */
-.card {
-  background-color: #ffffff; /* Default white */
+/* --- TARJETAS STICKY / FIGJAM (.tarjeta-vura & .card) --- */
+.card, .tarjeta-vura {
+  background-color: var(--sticky-paper);
   border: var(--border-thickness) solid var(--border-dark) !important;
-  border-radius: 2px 15px 15px 15px !important; /* Asymmetrical sticky note shape */
-  box-shadow: var(--shadow-solid) !important;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-radius: var(--radius-card) !important;
+  box-shadow: var(--shadow-hard) !important;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease;
+  position: relative;
 }
 
-.card:hover {
-  transform: translateY(-2px) translateX(-2px);
-  box-shadow: var(--shadow-solid-hover) !important;
+.card:hover, .tarjeta-vura:hover {
+  transform: translateY(-3px) rotate(0.5deg);
+  box-shadow: var(--shadow-hard-lg) !important;
+}
+
+.card:active, .tarjeta-vura:active {
+  transform: translate(2px, 2px) rotate(0deg);
+  box-shadow: var(--shadow-hard-sm) !important;
 }
 
 .card-header {
   background-color: transparent !important;
-  border-bottom: var(--border-thickness) solid var(--border-dark) !important;
+  border-bottom: var(--border-thickness) dashed var(--border-dark) !important;
   font-family: 'Caveat', cursive;
   font-size: 1.5rem;
   padding: 1rem 1.25rem !important;
 }
 
-/* Clases de colores para las tarjetas (post-its) */
-.bg-sticky-yellow { background-color: var(--sticky-yellow) !important; }
-.bg-sticky-purple { background-color: var(--sticky-purple) !important; }
-.bg-sticky-blue { background-color: var(--sticky-blue) !important; }
-.bg-sticky-pink { background-color: var(--sticky-pink) !important; }
-.bg-sticky-green { background-color: var(--sticky-green) !important; }
-.bg-sticky-orange { background-color: var(--sticky-orange) !important; }
+/* Modificadores de Color Pastel */
+.bg-sticky-yellow  { background-color: var(--sticky-yellow) !important; }
+.bg-sticky-purple  { background-color: var(--sticky-purple) !important; }
+.bg-sticky-blue    { background-color: var(--sticky-blue) !important; }
+.bg-sticky-pink    { background-color: var(--sticky-pink) !important; }
+.bg-sticky-green   { background-color: var(--sticky-green) !important; }
+.bg-sticky-orange  { background-color: var(--sticky-orange) !important; }
+.bg-sticky-coral   { background-color: var(--sticky-coral) !important; }
+.bg-sticky-paper   { background-color: var(--sticky-paper) !important; }
+
+/* Rotaciones sutiles opcionales */
+.tilt-left { transform: rotate(-1.5deg); }
+.tilt-right { transform: rotate(1.2deg); }
 
 /* Menú de navegación flotante (Toolbar) */
 .navbar {
-  background-color: #ffffff !important;
+  background-color: var(--sticky-paper) !important;
   border: var(--border-thickness) solid var(--border-dark);
   border-radius: 12px;
-  box-shadow: var(--shadow-solid);
+  box-shadow: var(--shadow-hard);
   margin-top: 1rem;
   padding: 0.5rem 1rem !important;
 }
@@ -86,63 +108,84 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
 .nav-link {
   color: var(--border-dark) !important;
   font-weight: 700;
-  font-family: 'Nunito', sans-serif; /* Keep links readable */
+  font-family: 'Nunito', sans-serif;
 }
 
 .nav-link:hover {
   color: var(--primary-btn) !important;
 }
 
-/* Botones estilo Flat / Comic */
+/* --- BOTONES ESTILO FIGJAM --- */
+.btn {
+  border: var(--border-thickness) solid var(--border-dark) !important;
+  border-radius: var(--radius-btn) !important;
+  font-weight: 800;
+  box-shadow: var(--shadow-hard-sm) !important;
+  transition: all 0.1s ease;
+}
+
 .btn-primary {
   background-color: var(--primary-btn) !important;
-  border: var(--border-thickness) solid var(--border-dark) !important;
-  border-radius: 8px !important;
-  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.15);
-  font-weight: 800;
-  color: white;
-  transition: all 0.1s ease;
+  color: #ffffff !important;
 }
 
 .btn-primary:hover {
   background-color: #7c3aed !important;
-  transform: translateY(1px) translateX(1px);
-  box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hard) !important;
 }
 
 .btn-primary:active {
-  transform: translateY(2px) translateX(2px);
-  box-shadow: none;
+  transform: translate(2px, 2px);
+  box-shadow: none !important;
 }
 
-/* Botones outline (secundarios) */
 .btn-outline-primary {
   color: var(--border-dark) !important;
   background-color: #ffffff !important;
-  border: var(--border-thickness) solid var(--border-dark) !important;
-  border-radius: 8px !important;
-  font-weight: 800;
-  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.15);
-  transition: all 0.1s ease;
 }
 
 .btn-outline-primary:hover {
   background-color: var(--sticky-yellow) !important;
-  transform: translateY(1px) translateX(1px);
-  box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hard) !important;
 }
 
-/* Inputs de formulario */
-.form-control {
+.btn-outline-primary:active {
+  transform: translate(2px, 2px);
+  box-shadow: none !important;
+}
+
+/* --- BADGES & STICKERS --- */
+.badge {
+  border: 2px solid var(--border-dark) !important;
+  border-radius: var(--radius-pill) !important;
+  font-weight: 800 !important;
+  padding: 0.35em 0.75em !important;
+  box-shadow: 1.5px 1.5px 0px var(--border-dark);
+  color: var(--border-dark) !important;
+}
+
+.bg-primary.badge {
+  background-color: var(--sticky-blue) !important;
+}
+
+.bg-secondary.badge {
+  background-color: var(--sticky-yellow) !important;
+}
+
+/* --- INPUTS & CONTROLES --- */
+.form-control, .form-select {
   border: var(--border-thickness) solid var(--border-dark) !important;
-  border-radius: 8px !important;
-  background-color: rgba(255, 255, 255, 0.9) !important;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+  border-radius: var(--radius-btn) !important;
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);
+  font-weight: 600;
 }
 
-.form-control:focus {
+.form-control:focus, .form-select:focus {
   border-color: var(--primary-btn) !important;
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3) !important;
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.25), var(--shadow-hard-sm) !important;
 }
 
 /* Aviso discreto: pizarra / diapos se usan mejor en computadora. */
@@ -151,14 +194,14 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  background: #fef9c3;
+  background: var(--sticky-yellow);
   border: var(--border-thickness) solid var(--border-dark);
   border-radius: 12px;
-  box-shadow: var(--shadow-solid);
+  box-shadow: var(--shadow-hard-sm);
   padding: 8px 12px;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--border-dark);
   z-index: 1200;
 }
 .aviso-movil-light button {
@@ -214,5 +257,8 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
   }
   #contenedor-toasts .toast {
     width: 100%;
+    border: var(--border-thickness) solid var(--border-dark);
+    box-shadow: var(--shadow-hard);
+    border-radius: var(--radius-btn);
   }
 }

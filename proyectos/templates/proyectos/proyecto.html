@@ -23,7 +23,7 @@
   </div>
 </div>
 
-<div class="card shadow-sm mb-3">
+<div class="card card-tape tilt-right mb-4 mt-3">
   <div class="card-body">
     {% if proyecto.descripcion %}
       <p class="mb-0">{{ proyecto.descripcion }}</p>
@@ -35,7 +35,7 @@
 
 <div class="row g-3">
   <div class="col-md-4">
-    <div class="card shadow-sm text-center">
+    <div class="card text-center bg-sticky-yellow tilt-left">
       <div class="card-body">
         <h2 class="h6">Tareas</h2>
         <p class="text-muted small">{{ proyecto.tareas | length }} tarea(s)</p>
@@ -46,7 +46,7 @@
     </div>
   </div>
   <div class="col-md-4">
-    <div class="card shadow-sm text-center">
+    <div class="card text-center bg-sticky-blue">
       <div class="card-body">
         <h2 class="h6">Pizarra</h2>
         <p class="text-muted small">La pizarra del proyecto es la pantalla de inicio de Vura.</p>
@@ -57,7 +57,7 @@
     </div>
   </div>
   <div class="col-md-4">
-    <div class="card shadow-sm text-center">
+    <div class="card text-center bg-sticky-purple tilt-right">
       <div class="card-body">
         <h2 class="h6">Presentación</h2>
         <p class="text-muted small">

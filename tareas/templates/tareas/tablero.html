@@ -42,16 +42,16 @@
 <div class="row g-3 tablero-movil">
   {% for estado, lista in columnas.items() %}
     <div class="col-md-4">
-      <div class="card shadow-sm h-100">
-        <div class="card-header bg-white text-center">
+      <div class="card bg-sticky-paper h-100">
+        <div class="card-header text-center">
           <strong>{{ titulos_estado[estado] }}</strong>
           <span id="contador-{{ estado }}" class="badge bg-secondary">{{ lista | length }}</span>
         </div>
         {# El contenido inicial lo renderiza el servidor; tareas.js lo redibuja desde el documento Yjs. #}
         <div id="columna-{{ estado }}" class="card-body p-2">
           {% for tarea in lista %}
-            <div class="card mb-2">
-              <div class="card-body p-2">
+            <div class="card bg-sticky-yellow mb-3 tilt-left cursor-pointer">
+              <div class="card-body p-3">
                 <strong class="small">{{ tarea.titulo }}</strong>
                 {% if tarea.descripcion %}
                   <div class="text-muted small">{{ tarea.descripcion }}</div>
