@@ -10,7 +10,7 @@ from werkzeug.utils import secure_filename
 
 from config import RUTA_DATOS
 from extensiones import db, socketio, hora_local
-from equipos.models import Equipo, MiembroEquipo
+from equipos.models import Equipo, MiembroEquipo, Proyecto
 from chat.models import Mensaje, AdjuntoMensaje, ReaccionMensaje
 
 chat = Blueprint("chat", __name__, template_folder="templates",
@@ -82,6 +82,14 @@ def emitir_mensaje(mensaje):
 @login_required
 def sala(id_equipo):
     equipo = obtener_equipo_de_miembro(id_equipo)
+    
+    proyecto = None
+    id_proyecto = request.args.get("id_proyecto", type=int)
+    if id_proyecto:
+        proyecto_bd = db.session.get(Proyecto, id_proyecto)
+        if proyecto_bd and proyecto_bd.id_equipo == equipo.id:
+            proyecto = proyecto_bd
+            
     mensajes = (Mensaje.query.filter_by(id_equipo=equipo.id)
                 .order_by(Mensaje.enviado_en)
                 .limit(200).all())
@@ -89,7 +97,7 @@ def sala(id_equipo):
         [serializar_mensaje(m) for m in mensajes],
         ensure_ascii=False,
     ).replace("<", "\\u003c")
-    return render_template("chat/sala.html", equipo=equipo, datos_mensajes=datos_mensajes)
+    return render_template("chat/sala.html", equipo=equipo, datos_mensajes=datos_mensajes, proyecto=proyecto)
 
 
 @chat.route("/equipos/<int:id_equipo>/chat/mensajes")
@@ -156,7 +164,15 @@ def servir_medio_chat(id_equipo, nombre_archivo):
 @login_required
 def llamada(id_equipo):
     equipo = obtener_equipo_de_miembro(id_equipo)
-    return render_template("chat/llamada.html", equipo=equipo)
+    
+    proyecto = None
+    id_proyecto = request.args.get("id_proyecto", type=int)
+    if id_proyecto:
+        proyecto_bd = db.session.get(Proyecto, id_proyecto)
+        if proyecto_bd and proyecto_bd.id_equipo == equipo.id:
+            proyecto = proyecto_bd
+            
+    return render_template("chat/llamada.html", equipo=equipo, proyecto=proyecto)
 
 
 # ---- Eventos de Socket.IO ----

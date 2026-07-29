@@ -38,8 +38,9 @@
               <span class="icono">💬</span>
               <span class="etiqueta">Chat</span>
             </button>
-            <a class="sidebar-link" href="{{ url_for('chat.llamada', id_equipo=proyecto.equipo.id) }}" title="Videollamada">
-              <span class="icono">📹</span><span class="etiqueta">Llamada</span>
+            <a class="sidebar-link {% if request.endpoint == 'chat.llamada' %}active{% endif %}" href="{{ url_for('chat.llamada', id_equipo=proyecto.equipo.id, id_proyecto=proyecto.id) }}" title="Videollamada con el equipo">
+              <span class="icono">🎙️</span>
+              <span class="etiqueta">Llamada</span>
             </a>
             <a class="sidebar-link {% if request.endpoint == 'notas.ver_notas' %}active{% endif %}" href="{{ url_for('notas.ver_notas', id_proyecto=proyecto.id) }}" title="Pizarra">
               <span class="icono">🖍️</span><span class="etiqueta">Pizarra</span>
@@ -71,9 +72,9 @@
       </nav>
 
       <div class="sidebar-bottom">
-        <span id="estado-conexion" class="badge bg-success-subtle text-success-emphasis" style="font-size: 0.6rem; padding: 4px;"></span>
         {% if current_user.is_authenticated %}
-          <a class="sidebar-link" href="{{ url_for('autenticacion.cerrar_sesion') }}" title="Cerrar sesión">
+          <span id="estado-conexion" class="badge bg-success-subtle text-success-emphasis mb-2 d-block mx-auto" style="font-size: 0.6rem; padding: 4px; width: fit-content;"></span>
+          <a class="sidebar-link" href="{{ url_for('autenticacion.cerrar_sesion') }}" title="Cerrar sesión" onclick="return confirm('¿Estás seguro de que deseas salir?');">
             <span class="icono">👋</span>
             <span class="etiqueta">Salir</span>
           </a>
@@ -101,11 +102,40 @@
   {# Aquí aparecen las notificaciones (toasts) de mensajes y llamadas. #}
   <div id="contenedor-toasts" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
 
+  {% if proyecto %}
+  <div id="panel-chat" data-id-equipo="{{ proyecto.equipo.id }}" data-id-usuario="{{ current_user.id }}" data-nombre-usuario="{{ current_user.nombre }}">
+    <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+      <strong>💬 {{ proyecto.equipo.nombre }}</strong>
+      <button id="boton-cerrar-chat" type="button" class="btn-close"></button>
+    </div>
+    <div id="mensajes-panel" class="mensajes"></div>
+    <div id="aviso-escribiendo-panel" class="px-3 small text-muted fst-italic" style="min-height: 1.4em;"></div>
+    <div class="p-2 border-top">
+      <div id="emojis-chat-panel" class="gap-1 flex-wrap mb-1">
+        {% for emoji in ["😀", "😂", "😍", "🤔", "😮", "😢", "👏", "🙌", "🔥", "✅", "🎉", "❤️"] %}
+          <button class="btn btn-sm btn-light emoji-panel" type="button">{{ emoji }}</button>
+        {% endfor %}
+      </div>
+      <form id="formulario-chat-panel" class="d-flex gap-1" autocomplete="off">
+        <button id="boton-emojis-panel" class="btn btn-sm btn-outline-secondary" type="button" title="Emojis">😊</button>
+        <button id="boton-imagen-panel" class="btn btn-sm btn-outline-secondary" type="button" title="Imagen">📷</button>
+        <button id="boton-voz-panel" class="btn btn-sm btn-outline-secondary" type="button" title="Voz-it">🎙️</button>
+        <textarea id="texto-chat-panel" class="form-control form-control-sm" maxlength="1000" rows="1" placeholder="Mensaje..."></textarea>
+        <button class="btn btn-sm btn-primary" type="submit">Enviar</button>
+      </form>
+      <input id="entrada-imagen-panel" type="file" accept="image/*" class="d-none">
+    </div>
+  </div>
+  {% endif %}
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="{{ url_for('static', filename='js/aplicacion.js') }}"></script>
   {% if current_user.is_authenticated %}
     <script src="https://cdn.jsdelivr.net/npm/socket.io@4.7.5/client-dist/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/notificaciones.js') }}"></script>
+    {% if proyecto %}
+    <script src="{{ url_for('static', filename='js/chat_global.js') }}"></script>
+    {% endif %}
   {% endif %}
 </body>
 </html>

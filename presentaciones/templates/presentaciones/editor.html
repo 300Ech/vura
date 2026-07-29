@@ -513,8 +513,15 @@
             <input id="selector-color" type="color" value="#1e293b" class="form-control form-control-color" style="width:28px;height:28px;padding:0;border-radius:4px;">
           </label>
           <span class="vr mx-1"></span>
-          <button id="boton-adelante" class="btn btn-sm btn-outline-secondary" type="button" title="Traer al frente">↑</button>
-          <button id="boton-atras" class="btn btn-sm btn-outline-secondary" type="button" title="Enviar atrás">↓</button>
+          <div class="dropdown d-inline-block">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Reorganizar capas">
+              Capas
+            </button>
+            <ul class="dropdown-menu shadow-sm" style="font-size: 0.9rem;">
+              <li><button class="dropdown-item" type="button" id="boton-adelante">Traer al frente</button></li>
+              <li><button class="dropdown-item" type="button" id="boton-atras">Enviar atrás</button></li>
+            </ul>
+          </div>
           <button id="boton-eliminar-objeto" class="btn btn-sm btn-outline-danger" type="button">Borrar</button>
         </span>
       </div>

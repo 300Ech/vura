@@ -3,6 +3,11 @@
 
 {% block contenido %}
 <style>
+  .main-content {
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+  
   #notas {
     border: none !important;
     box-shadow: none !important;
@@ -68,7 +73,7 @@
   .pizarra-top-controls {
     position: fixed;
     top: 16px;
-    left: 20px;
+    left: calc(var(--sidebar-width) + 16px);
     right: 16px;
     z-index: 1000;
     pointer-events: none; /* Clics pasan al lienzo */
@@ -221,121 +226,6 @@
   }
   .badge-notificacion.visible { display: block; }
 
-  /* Panel de chat que se desliza sobre la pizarra. */
-  #panel-chat {
-    position: fixed;
-    top: 0;
-    right: -360px;
-    width: 350px;
-    height: 100vh;
-    background: white;
-    border-left: var(--border-thickness, 2px) solid var(--border-dark, #1e293b);
-    box-shadow: -6px 0 18px rgba(0, 0, 0, 0.15);
-    z-index: 1500;
-    display: flex;
-    flex-direction: column;
-    transition: right 0.25s ease;
-  }
-  #panel-chat.abierto {
-    right: 0;
-  }
-  #panel-chat .mensajes {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    background: var(--bg-color, #f3f4f6);
-  }
-  #panel-chat .burbuja-panel {
-    max-width: 88%;
-    padding: 7px 10px;
-    margin-bottom: 8px;
-    background: white;
-    border: var(--border-thickness, 2px) solid var(--border-dark, #1e293b);
-    border-radius: 14px 14px 14px 4px;
-    box-shadow: 2px 2px 0 rgba(0,0,0,.12);
-  }
-  #panel-chat .burbuja-panel.mia {
-    background: var(--primary-btn, #8b5cf6);
-    color: white;
-    margin-left: auto;
-    border-radius: 14px 14px 4px 14px;
-  }
-  #panel-chat .texto-panel {
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-  }
-  #panel-chat #texto-chat-panel {
-    resize: none;
-    overflow-y: auto;
-    max-height: 110px;
-    border-radius: 12px;
-  }
-  #panel-chat #formulario-chat-panel { align-items: flex-end; }
-  #panel-chat .imagen-chat-panel {
-    display: block;
-    max-width: 230px;
-    max-height: 190px;
-    border-radius: 7px;
-    cursor: zoom-in;
-  }
-  #panel-chat .reacciones-panel {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 3px;
-    margin-top: 4px;
-  }
-  #panel-chat .reaccion-panel {
-    border: 1px solid #cbd5e1;
-    border-radius: 999px;
-    background: white;
-    padding: 1px 6px;
-    font-size: .72rem;
-    color: #1e293b;
-  }
-  #panel-chat .reaccion-panel.mia { background: #ede9fe; border-color: #8b5cf6; }
-  #panel-chat .acciones-reaccion-panel {
-    position: relative;
-    display: inline-flex;
-    margin-top: 4px;
-  }
-  #panel-chat .boton-agregar-reaccion {
-    border: 1px solid #cbd5e1;
-    border-radius: 999px;
-    background: white;
-    padding: 0 6px;
-    font-size: 0.72rem;
-    line-height: 1.5;
-    color: #1e293b;
-  }
-  #panel-chat .boton-agregar-reaccion:hover { background: #f1f5f9; }
-  #panel-chat .menu-reacciones-panel {
-    display: none;
-    position: absolute;
-    left: 0;
-    bottom: calc(100% + 4px);
-    gap: 2px;
-    background: white;
-    border: 2px solid #1e293b;
-    border-radius: 999px;
-    box-shadow: 3px 3px 0 rgba(0,0,0,.15);
-    padding: 4px 8px;
-    z-index: 5;
-  }
-  #panel-chat .menu-reacciones-panel.abierto { display: flex; }
-  #panel-chat .menu-reacciones-panel button {
-    border: 0;
-    background: transparent;
-    padding: 1px 3px;
-    font-size: 1rem;
-  }
-  #panel-chat .menu-reacciones-panel button:hover {
-    background: #f1f5f9;
-    border-radius: 6px;
-  }
-  #emojis-chat-panel { display: none; }
-  #emojis-chat-panel.abierto { display: flex; }
 
   /* ---- Móvil: pizarra usable + versión light ---- */
   @media (max-width: 768px) {
@@ -422,31 +312,6 @@
 
 
 {# Panel de chat sobre la pizarra: chateás sin dejar de ver los post-its. #}
-<div id="panel-chat" data-id-equipo="{{ proyecto.equipo.id }}" data-id-usuario="{{ current_user.id }}" data-nombre-usuario="{{ current_user.nombre }}">
-  <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
-    <strong>💬 {{ proyecto.equipo.nombre }}</strong>
-    <button id="boton-cerrar-chat" type="button" class="btn-close"></button>
-  </div>
-  <div id="mensajes-panel" class="mensajes"></div>
-  <div id="aviso-escribiendo-panel" class="px-3 small text-muted fst-italic" style="min-height: 1.4em;"></div>
-  <div class="p-2 border-top">
-    <div id="emojis-chat-panel" class="gap-1 flex-wrap mb-1">
-      {% for emoji in ["😀", "😂", "😍", "🤔", "😮", "😢", "👏", "🙌", "🔥", "✅", "🎉", "❤️"] %}
-        <button class="btn btn-sm btn-light emoji-panel" type="button">{{ emoji }}</button>
-      {% endfor %}
-    </div>
-    <form id="formulario-chat-panel" class="d-flex gap-1" autocomplete="off">
-      <button id="boton-emojis-panel" class="btn btn-sm btn-outline-secondary" type="button" title="Emojis">😊</button>
-      <button id="boton-imagen-panel" class="btn btn-sm btn-outline-secondary" type="button" title="Imagen">📷</button>
-      <button id="boton-voz-panel" class="btn btn-sm btn-outline-secondary" type="button" title="Voz-it">🎙️</button>
-      {# Textarea (no input) para que crezca solo con los mensajes largos. #}
-      <textarea id="texto-chat-panel" class="form-control form-control-sm" maxlength="1000"
-                rows="1" placeholder="Mensaje..."></textarea>
-      <button class="btn btn-sm btn-primary" type="submit">Enviar</button>
-    </form>
-    <input id="entrada-imagen-panel" type="file" accept="image/*" class="d-none">
-  </div>
-</div>
 
 <script>
   document.getElementById("selector-proyecto").addEventListener("change", (evento) => {

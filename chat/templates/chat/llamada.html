@@ -88,7 +88,7 @@
 </div>
 
 <div id="llamada" data-id-equipo="{{ equipo.id }}"
-     data-url-chat="{{ url_for('chat.sala', id_equipo=equipo.id) }}">
+     data-url-chat="{% if proyecto %}{{ url_for('notas.ver_notas', id_proyecto=proyecto.id) }}{% else %}{{ url_for('chat.sala', id_equipo=equipo.id) }}{% endif %}">
   <div id="cuadricula-videos">
     <div class="celda-video">
       <video id="video-local" autoplay playsinline muted></video>
