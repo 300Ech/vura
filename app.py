@@ -47,6 +47,13 @@ socketio.init_app(app)
 with app.app_context():
     db.create_all()
 
+@app.route("/reset_db_demo")
+def reset_db_demo():
+    """Ruta temporal para borrar la BD persistente en Railway."""
+    db.drop_all()
+    db.create_all()
+    return "Base de datos borrada exitosamente. Ya puedes iniciar tu demo."
+
 
 @app.route("/")
 @login_required
