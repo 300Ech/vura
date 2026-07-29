@@ -20,9 +20,38 @@ document.addEventListener("click", function pedirPermiso() {
   document.removeEventListener("click", pedirPermiso);
 });
 
+// Generador de sonido corto (tipo "pop") sin necesidad de archivos MP3.
+function reproducirSonidoNotificacion() {
+  const ContextoAudio = window.AudioContext || window.webkitAudioContext;
+  if (!ContextoAudio) return;
+  try {
+    const ctx = new ContextoAudio();
+    const osc = ctx.createOscillator();
+    const ganancia = ctx.createGain();
+    
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(600, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+    
+    ganancia.gain.setValueAtTime(0.15, ctx.currentTime);
+    ganancia.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+    
+    osc.connect(ganancia);
+    ganancia.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 0.1);
+  } catch (e) {
+    // Si el navegador bloquea el audio automático, lo ignoramos silenciosamente
+  }
+}
+
 socketNotificaciones.on("nuevo_mensaje", (datos) => {
   if (datos.id_usuario === miId) return; // mis propios mensajes no se notifican
-  const enlaceChat = `/equipos/${datos.id_equipo}/chat`;
+  
+  reproducirSonidoNotificacion();
+
+  const enlaceChat = \`/equipos/\${datos.id_equipo}/chat\`;
   if (window.location.pathname === enlaceChat) return; // ya estoy viendo ese chat
 
   const resumen = datos.resumen || datos.texto || "Nuevo mensaje";
@@ -37,11 +66,13 @@ socketNotificaciones.on("nuevo_mensaje", (datos) => {
 // El servidor manda título, texto y enlace; aquí solo se decide si mostrarlo.
 socketNotificaciones.on("notificacion", (datos) => {
   if (datos.id_usuario === miId) return; // lo que hago yo no se me notifica
+  reproducirSonidoNotificacion();
   if (window.location.pathname === datos.enlace) return; // ya estoy viendo esa página
   notificar(datos.titulo, datos.texto, datos.enlace);
 });
 
 socketNotificaciones.on("llamada_iniciada", (datos) => {
+  reproducirSonidoNotificacion();
   notificar(
     `📞 Videollamada en ${datos.nombre_equipo}`,
     `${datos.nombre} inició una llamada. Haz clic para unirte.`,
