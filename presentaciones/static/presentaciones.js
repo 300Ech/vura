@@ -14,8 +14,15 @@ const panelDiapositivas = document.getElementById("panel-diapositivas");
 const selectorColor = document.getElementById("selector-color");
 const selectorFondo = document.getElementById("selector-fondo");
 const selectorTamano = document.getElementById("selector-tamano");
+const selectorFuente = document.getElementById("selector-fuente");
 
-const lienzo = new fabric.Canvas("lienzo", { backgroundColor: "#ffffff", preserveObjectStacking: true });
+const ANCHO = 960;
+const ALTO = 540;
+const lienzo = new fabric.Canvas("lienzo", {
+  backgroundColor: "#ffffff",
+  preserveObjectStacking: true,
+  selection: true,
+});
 
 // diapositivas = [{ id, contenido }] en el orden actual.
 let diapositivas = diapositivasIniciales.map((d) => ({ id: d.id, contenido: d.contenido }));
@@ -23,13 +30,14 @@ let indiceActual = 0;
 let cargandoDiapositiva = false;
 let temporizadorGuardado = null;
 let hayCambiosSinGuardar = false;
+let colorAcento = "#8b5cf6";
 
 // ---- Documento compartido ----
 
 const ORIGEN_LOCAL = "local";
 const doc = new Y.Doc();
-const lienzosCompartidos = doc.getMap("lienzos"); // id de diapositiva -> JSON del lienzo
-const metaCompartida = doc.getMap("meta");        // "orden" -> lista de ids
+const lienzosCompartidos = doc.getMap("lienzos");
+const metaCompartida = doc.getMap("meta");
 
 conectarDocumento({
   tipo: "presentacion",
@@ -37,7 +45,6 @@ conectarDocumento({
   doc: doc,
   alRecibirEstado: () => {
     if (!metaCompartida.get("orden")) {
-      // Documento compartido vacío: se siembra con lo guardado en el servidor.
       doc.transact(() => {
         metaCompartida.set("orden", diapositivas.map((d) => d.id));
         diapositivas.forEach((d) => {
@@ -56,9 +63,7 @@ lienzosCompartidos.observe((evento) => {
     if (!diapositiva) return;
     diapositiva.contenido = lienzosCompartidos.get(clave) || null;
     generarMiniatura(diapositiva);
-    if (id === diapositivas[indiceActual].id) {
-      cargarDiapositiva(indiceActual); // un compañero cambió la diapositiva que estamos viendo
-    }
+    if (id === diapositivas[indiceActual].id) cargarDiapositiva(indiceActual);
   });
 });
 
@@ -86,7 +91,6 @@ function publicarOrden() {
   doc.transact(() => {
     metaCompartida.set("orden", diapositivas.map((d) => d.id));
   }, ORIGEN_LOCAL);
-  // También se guarda el orden en el servidor, para que la próxima carga salga igual.
   fetch(`/presentaciones/${idPresentacion}/orden`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -95,13 +99,12 @@ function publicarOrden() {
 }
 
 // ---- Miniaturas ----
-// Un lienzo estático oculto dibuja cada diapositiva en pequeño y la convierte en imagen.
 
-const miniaturas = new Map(); // id de diapositiva -> imagen (data URL)
+const miniaturas = new Map();
 const lienzoMiniaturas = new fabric.StaticCanvas(document.createElement("canvas"), {
-  width: 960, height: 540,
+  width: ANCHO, height: ALTO,
 });
-let colaMiniaturas = Promise.resolve(); // se generan de una en una, en orden
+let colaMiniaturas = Promise.resolve();
 
 function generarMiniatura(diapositiva) {
   colaMiniaturas = colaMiniaturas.then(() => new Promise((listo) => {
@@ -136,7 +139,7 @@ function dibujarPanel() {
     if (miniaturas.has(diapositiva.id)) imagen.src = miniaturas.get(diapositiva.id);
     const numero = document.createElement("span");
     numero.className = "numero";
-    numero.textContent = indice + 1;
+    numero.textContent = "Diapositiva " + (indice + 1);
 
     boton.append(imagen, numero);
     boton.addEventListener("click", async () => {
@@ -147,7 +150,7 @@ function dibujarPanel() {
   });
 }
 
-// ---- Cargar y cambiar de diapositiva ----
+// ---- Cargar y guardar ----
 
 function cargarDiapositiva(indice) {
   cargandoDiapositiva = true;
@@ -158,7 +161,7 @@ function cargarDiapositiva(indice) {
   if (contenido) {
     lienzo.loadFromJSON(contenido, () => {
       lienzo.renderAll();
-      selectorFondo.value = lienzo.backgroundColor || "#ffffff";
+      selectorFondo.value = rgbAHex(lienzo.backgroundColor) || "#ffffff";
       cargandoDiapositiva = false;
     });
   } else {
@@ -168,8 +171,6 @@ function cargarDiapositiva(indice) {
   }
   dibujarPanel();
 }
-
-// ---- Guardado ----
 
 function programarGuardado() {
   if (cargandoDiapositiva) return;
@@ -210,18 +211,181 @@ lienzo.on("object:added", programarGuardado);
 lienzo.on("object:modified", programarGuardado);
 lienzo.on("object:removed", programarGuardado);
 
-// ---- Barra de herramientas ----
+// ---- Utilidades de estilo ----
+
+function rgbAHex(valor) {
+  if (!valor || typeof valor !== "string") return null;
+  if (valor.startsWith("#")) return valor;
+  const m = valor.match(/(\d+),\s*(\d+),\s*(\d+)/);
+  if (!m) return null;
+  return "#" + [m[1], m[2], m[3]].map((n) => Number(n).toString(16).padStart(2, "0")).join("");
+}
+
+function esTexto(objeto) {
+  return objeto && ["i-text", "textbox", "text"].includes(objeto.type);
+}
+
+function aplicarAlSeleccionado(cambios) {
+  const objeto = lienzo.getActiveObject();
+  if (!objeto) return;
+  objeto.set(cambios);
+  lienzo.renderAll();
+  programarGuardado();
+}
+
+function textoBase(texto, opciones) {
+  return new fabric.Textbox(texto, {
+    fontFamily: selectorFuente.value,
+    fill: selectorColor.value,
+    fontSize: Number(selectorTamano.value),
+    ...opciones,
+  });
+}
+
+// ---- Plantillas ----
+// Cada plantilla limpia la diapositiva y deja un diseño listo para editar.
+// Son composiciones simples de objetos de Fabric (fácil de explicar en la feria).
+
+function limpiarYFondo(fondo) {
+  lienzo.clear();
+  lienzo.backgroundColor = fondo || selectorFondo.value || "#ffffff";
+  selectorFondo.value = rgbAHex(lienzo.backgroundColor) || "#ffffff";
+}
+
+function aplicarPlantillaPortada() {
+  limpiarYFondo(selectorFondo.value);
+  const banda = new fabric.Rect({
+    left: 0, top: 360, width: ANCHO, height: 180,
+    fill: colorAcento, selectable: true,
+  });
+  const titulo = textoBase("Título de la presentación", {
+    left: 60, top: 400, width: 840, fontSize: 56, fontWeight: "bold", fill: "#ffffff",
+  });
+  const subtitulo = textoBase("Subtítulo · nombres del equipo", {
+    left: 60, top: 475, width: 840, fontSize: 28, fill: "#ffffff",
+  });
+  const decoracion = new fabric.Circle({
+    left: 720, top: 40, radius: 90, fill: colorAcento, opacity: 0.25,
+  });
+  lienzo.add(decoracion, banda, titulo, subtitulo);
+  lienzo.setActiveObject(titulo);
+  lienzo.renderAll();
+  programarGuardado();
+}
+
+function aplicarPlantillaLista() {
+  limpiarYFondo(selectorFondo.value);
+  const barra = new fabric.Rect({
+    left: 0, top: 0, width: 18, height: ALTO, fill: colorAcento,
+  });
+  const titulo = textoBase("Tema de la diapositiva", {
+    left: 60, top: 40, width: 840, fontSize: 42, fontWeight: "bold",
+  });
+  const items = [
+    "• Primer punto importante",
+    "• Segundo punto importante",
+    "• Tercer punto importante",
+    "• Cuarto punto (opcional)",
+  ];
+  lienzo.add(barra, titulo);
+  items.forEach((item, i) => {
+    lienzo.add(textoBase(item, {
+      left: 70, top: 130 + i * 70, width: 820, fontSize: 30,
+    }));
+  });
+  lienzo.setActiveObject(titulo);
+  lienzo.renderAll();
+  programarGuardado();
+}
+
+function aplicarPlantillaColumnas() {
+  limpiarYFondo(selectorFondo.value);
+  const titulo = textoBase("Comparación / ideas", {
+    left: 50, top: 30, width: 860, fontSize: 40, fontWeight: "bold", textAlign: "center",
+  });
+  const cajaIzq = new fabric.Rect({
+    left: 50, top: 110, width: 400, height: 360,
+    fill: colorAcento, opacity: 0.12, rx: 12, ry: 12,
+  });
+  const cajaDer = new fabric.Rect({
+    left: 510, top: 110, width: 400, height: 360,
+    fill: colorAcento, opacity: 0.12, rx: 12, ry: 12,
+  });
+  const colIzq = textoBase("Columna A\n\n• Idea 1\n• Idea 2\n• Idea 3", {
+    left: 70, top: 130, width: 360, fontSize: 26,
+  });
+  const colDer = textoBase("Columna B\n\n• Idea 1\n• Idea 2\n• Idea 3", {
+    left: 530, top: 130, width: 360, fontSize: 26,
+  });
+  lienzo.add(titulo, cajaIzq, cajaDer, colIzq, colDer);
+  lienzo.setActiveObject(titulo);
+  lienzo.renderAll();
+  programarGuardado();
+}
+
+function aplicarPlantillaCita() {
+  limpiarYFondo(selectorFondo.value);
+  const comillas = textoBase("“", {
+    left: 60, top: 80, width: 120, fontSize: 140, fill: colorAcento, fontFamily: "Georgia",
+  });
+  const cita = textoBase("Escribe aquí una idea clave\no una conclusión del equipo.", {
+    left: 120, top: 180, width: 720, fontSize: 40, fontStyle: "italic", textAlign: "center",
+  });
+  const autor = textoBase("— Nombre o fuente", {
+    left: 120, top: 420, width: 720, fontSize: 24, textAlign: "right", fill: "#64748b",
+  });
+  lienzo.add(comillas, cita, autor);
+  lienzo.setActiveObject(cita);
+  lienzo.renderAll();
+  programarGuardado();
+}
+
+document.getElementById("plantilla-portada").addEventListener("click", () => {
+  if (lienzo.getObjects().length && !confirm("¿Reemplazar el contenido de esta diapositiva por la plantilla Portada?")) return;
+  aplicarPlantillaPortada();
+});
+document.getElementById("plantilla-lista").addEventListener("click", () => {
+  if (lienzo.getObjects().length && !confirm("¿Reemplazar el contenido por la plantilla Lista?")) return;
+  aplicarPlantillaLista();
+});
+document.getElementById("plantilla-columnas").addEventListener("click", () => {
+  if (lienzo.getObjects().length && !confirm("¿Reemplazar el contenido por la plantilla 2 columnas?")) return;
+  aplicarPlantillaColumnas();
+});
+document.getElementById("plantilla-cita").addEventListener("click", () => {
+  if (lienzo.getObjects().length && !confirm("¿Reemplazar el contenido por la plantilla Cita?")) return;
+  aplicarPlantillaCita();
+});
+
+// Temas rápidos de fondo + color de acento para las plantillas.
+document.querySelectorAll(".tema-fondo").forEach((boton) => {
+  boton.addEventListener("click", () => {
+    document.querySelectorAll(".tema-fondo").forEach((b) => b.classList.remove("activo"));
+    boton.classList.add("activo");
+    colorAcento = boton.dataset.acento;
+    selectorFondo.value = boton.dataset.fondo;
+    selectorColor.value = boton.dataset.fondo === "#0f172a" ? "#ffffff" : "#1e293b";
+    lienzo.backgroundColor = boton.dataset.fondo;
+    lienzo.renderAll();
+    programarGuardado();
+  });
+});
+
+// ---- Insertar objetos ----
 
 document.getElementById("boton-texto").addEventListener("click", () => {
-  const texto = new fabric.IText("Escribe aquí", {
-    left: 100, top: 100, fontSize: Number(selectorTamano.value), fill: selectorColor.value, fontFamily: "Arial",
+  const texto = textoBase("Escribe aquí", {
+    left: 100, top: 100, width: 400, fontSize: Number(selectorTamano.value),
   });
   lienzo.add(texto);
   lienzo.setActiveObject(texto);
 });
 
 document.getElementById("boton-rectangulo").addEventListener("click", () => {
-  lienzo.add(new fabric.Rect({ left: 120, top: 120, width: 200, height: 120, fill: selectorColor.value }));
+  lienzo.add(new fabric.Rect({
+    left: 120, top: 120, width: 240, height: 140,
+    fill: selectorColor.value, rx: 8, ry: 8,
+  }));
 });
 
 document.getElementById("boton-circulo").addEventListener("click", () => {
@@ -233,26 +397,67 @@ document.getElementById("boton-triangulo").addEventListener("click", () => {
 });
 
 document.getElementById("boton-linea").addEventListener("click", () => {
-  lienzo.add(new fabric.Line([100, 200, 350, 200], { stroke: selectorColor.value, strokeWidth: 4 }));
+  lienzo.add(new fabric.Line([100, 220, 400, 220], {
+    stroke: selectorColor.value, strokeWidth: 5,
+  }));
+});
+
+document.getElementById("boton-flecha").addEventListener("click", () => {
+  // Flecha = línea + triángulo agrupados (sigue siendo Fabric puro).
+  const linea = new fabric.Line([0, 20, 180, 20], {
+    stroke: selectorColor.value, strokeWidth: 6,
+  });
+  const punta = new fabric.Triangle({
+    left: 170, top: 5, width: 30, height: 30, angle: 90, fill: selectorColor.value,
+  });
+  const flecha = new fabric.Group([linea, punta], { left: 140, top: 200 });
+  lienzo.add(flecha);
+  lienzo.setActiveObject(flecha);
 });
 
 document.getElementById("boton-imagen").addEventListener("click", () => {
   const url = prompt("Pega la URL de la imagen:");
   if (!url) return;
   fabric.Image.fromURL(url, (imagen) => {
-    imagen.scaleToWidth(300);
+    imagen.scaleToWidth(320);
+    imagen.set({ left: 120, top: 100 });
     lienzo.add(imagen);
+    lienzo.setActiveObject(imagen);
   }, { crossOrigin: "anonymous" });
 });
 
+document.getElementById("entrada-imagen-archivo").addEventListener("change", (evento) => {
+  const archivo = evento.target.files[0];
+  if (!archivo) return;
+  const lector = new FileReader();
+  lector.onload = () => {
+    fabric.Image.fromURL(lector.result, (imagen) => {
+      imagen.scaleToWidth(320);
+      imagen.set({ left: 120, top: 100 });
+      lienzo.add(imagen);
+      lienzo.setActiveObject(imagen);
+    });
+  };
+  lector.readAsDataURL(archivo);
+  evento.target.value = "";
+});
+
+// ---- Estilo del objeto seleccionado ----
+
 selectorColor.addEventListener("input", () => {
   const objeto = lienzo.getActiveObject();
-  if (objeto) {
-    // Las líneas se pintan con "stroke"; el resto de figuras y textos con "fill".
-    objeto.set(objeto.type === "line" ? "stroke" : "fill", selectorColor.value);
-    lienzo.renderAll();
-    programarGuardado();
+  if (!objeto) return;
+  if (objeto.type === "line") objeto.set("stroke", selectorColor.value);
+  else if (objeto.type === "group") {
+    objeto.getObjects().forEach((parte) => {
+      if (parte.type === "line") parte.set("stroke", selectorColor.value);
+      else parte.set("fill", selectorColor.value);
+    });
+  } else {
+    objeto.set("fill", selectorColor.value);
   }
+  lienzo.renderAll();
+  programarGuardado();
 });
 
 selectorFondo.addEventListener("input", () => {
@@ -263,11 +468,50 @@ selectorFondo.addEventListener("input", () => {
 
 selectorTamano.addEventListener("change", () => {
   const objeto = lienzo.getActiveObject();
-  if (objeto && objeto.fontSize) {
-    objeto.set("fontSize", Number(selectorTamano.value));
-    lienzo.renderAll();
-    programarGuardado();
-  }
+  if (esTexto(objeto)) aplicarAlSeleccionado({ fontSize: Number(selectorTamano.value) });
+});
+
+selectorFuente.addEventListener("change", () => {
+  const objeto = lienzo.getActiveObject();
+  if (esTexto(objeto)) aplicarAlSeleccionado({ fontFamily: selectorFuente.value });
+});
+
+document.getElementById("boton-negrita").addEventListener("click", () => {
+  const objeto = lienzo.getActiveObject();
+  if (!esTexto(objeto)) return;
+  aplicarAlSeleccionado({ fontWeight: objeto.fontWeight === "bold" ? "normal" : "bold" });
+});
+
+document.getElementById("boton-cursiva").addEventListener("click", () => {
+  const objeto = lienzo.getActiveObject();
+  if (!esTexto(objeto)) return;
+  aplicarAlSeleccionado({ fontStyle: objeto.fontStyle === "italic" ? "normal" : "italic" });
+});
+
+document.getElementById("boton-alinear-izq").addEventListener("click", () => {
+  if (esTexto(lienzo.getActiveObject())) aplicarAlSeleccionado({ textAlign: "left" });
+});
+document.getElementById("boton-alinear-centro").addEventListener("click", () => {
+  if (esTexto(lienzo.getActiveObject())) aplicarAlSeleccionado({ textAlign: "center" });
+});
+document.getElementById("boton-alinear-der").addEventListener("click", () => {
+  if (esTexto(lienzo.getActiveObject())) aplicarAlSeleccionado({ textAlign: "right" });
+});
+
+document.getElementById("boton-adelante").addEventListener("click", () => {
+  const objeto = lienzo.getActiveObject();
+  if (!objeto) return;
+  lienzo.bringToFront(objeto);
+  lienzo.renderAll();
+  programarGuardado();
+});
+
+document.getElementById("boton-atras").addEventListener("click", () => {
+  const objeto = lienzo.getActiveObject();
+  if (!objeto) return;
+  lienzo.sendToBack(objeto);
+  lienzo.renderAll();
+  programarGuardado();
 });
 
 function eliminarSeleccion() {
@@ -278,19 +522,19 @@ function eliminarSeleccion() {
 
 document.getElementById("boton-eliminar-objeto").addEventListener("click", eliminarSeleccion);
 
-// Tecla Suprimir (o Backspace) borra el objeto seleccionado,
-// salvo que se esté escribiendo dentro de un texto o un campo del formulario.
 document.addEventListener("keydown", (evento) => {
+  if (presentando) return;
   if (evento.key !== "Delete" && evento.key !== "Backspace") return;
   const objeto = lienzo.getActiveObject();
-  const escribiendo = (objeto && objeto.isEditing) || ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName);
+  const escribiendo = (objeto && objeto.isEditing)
+    || ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName);
   if (objeto && !escribiendo) {
     evento.preventDefault();
     eliminarSeleccion();
   }
 });
 
-// ---- Agregar, duplicar, mover y borrar diapositivas ----
+// ---- Gestión de diapositivas ----
 
 async function crearDiapositivaEnServidor() {
   const respuesta = await fetch(`/presentaciones/${idPresentacion}/diapositivas/crear`, { method: "POST" });
@@ -317,7 +561,6 @@ document.getElementById("boton-duplicar-diapositiva").addEventListener("click", 
   publicarDiapositiva(copia);
   publicarOrden();
   generarMiniatura(copia);
-  // El contenido copiado también se guarda en el servidor.
   fetch(`/diapositivas/${copia.id}/guardar`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -360,33 +603,48 @@ document.getElementById("boton-borrar-diapositiva").addEventListener("click", as
 });
 
 // ---- Modo presentación ----
-// Una capa negra a pantalla completa con un lienzo de solo lectura;
-// flechas para avanzar y retroceder, Escape para salir.
 
 const capaPresentacion = document.getElementById("modo-presentacion");
 const contadorPresentacion = document.getElementById("contador-presentacion");
+const barraProgreso = document.getElementById("barra-progreso-presentacion");
+const canvasPresentacion = document.getElementById("lienzo-presentacion");
 const lienzoPresentacion = new fabric.StaticCanvas("lienzo-presentacion");
 let indicePresentacion = 0;
 let presentando = false;
 
 function ajustarTamanoPresentacion() {
-  const escala = Math.min(window.innerWidth / 960, window.innerHeight / 540);
-  const elemento = lienzoPresentacion.getElement().parentElement || lienzoPresentacion.getElement();
-  elemento.style.transform = `scale(${escala})`;
-  elemento.style.transformOrigin = "center center";
+  const escala = Math.min(window.innerWidth / ANCHO, window.innerHeight / ALTO) * 0.96;
+  // El canvas de Fabric vive dentro de .canvas-container.
+  const contenedor = canvasPresentacion.closest(".canvas-container") || canvasPresentacion;
+  contenedor.style.transform = `scale(${escala})`;
+  contenedor.style.transformOrigin = "center center";
+}
+
+function actualizarProgreso() {
+  contadorPresentacion.textContent = `${indicePresentacion + 1} / ${diapositivas.length}`;
+  const porcentaje = ((indicePresentacion + 1) / diapositivas.length) * 100;
+  barraProgreso.style.width = porcentaje + "%";
 }
 
 function mostrarDiapositivaPresentacion(indice) {
-  indicePresentacion = indice;
-  const contenido = diapositivas[indice].contenido;
-  lienzoPresentacion.clear();
-  lienzoPresentacion.backgroundColor = "#ffffff";
-  if (contenido) {
-    lienzoPresentacion.loadFromJSON(contenido, () => lienzoPresentacion.renderAll());
-  } else {
-    lienzoPresentacion.renderAll();
-  }
-  contadorPresentacion.textContent = `${indice + 1} / ${diapositivas.length}`;
+  // Fade corto: oculta, carga, muestra.
+  canvasPresentacion.classList.add("ocultando");
+  setTimeout(() => {
+    indicePresentacion = indice;
+    const contenido = diapositivas[indice].contenido;
+    lienzoPresentacion.clear();
+    lienzoPresentacion.backgroundColor = "#ffffff";
+    const terminar = () => {
+      lienzoPresentacion.renderAll();
+      actualizarProgreso();
+      canvasPresentacion.classList.remove("ocultando");
+    };
+    if (contenido) {
+      lienzoPresentacion.loadFromJSON(contenido, terminar);
+    } else {
+      terminar();
+    }
+  }, 140);
 }
 
 document.getElementById("boton-presentar").addEventListener("click", async () => {
@@ -403,26 +661,34 @@ document.getElementById("boton-presentar").addEventListener("click", async () =>
 function salirDePresentacion() {
   presentando = false;
   capaPresentacion.classList.remove("activo");
+  canvasPresentacion.classList.remove("ocultando");
   if (document.fullscreenElement) document.exitFullscreen();
 }
 
 document.addEventListener("keydown", (evento) => {
   if (!presentando) return;
   if (evento.key === "ArrowRight" || evento.key === " " || evento.key === "PageDown") {
+    evento.preventDefault();
     if (indicePresentacion < diapositivas.length - 1) mostrarDiapositivaPresentacion(indicePresentacion + 1);
   } else if (evento.key === "ArrowLeft" || evento.key === "PageUp") {
+    evento.preventDefault();
     if (indicePresentacion > 0) mostrarDiapositivaPresentacion(indicePresentacion - 1);
+  } else if (evento.key === "Home") {
+    mostrarDiapositivaPresentacion(0);
+  } else if (evento.key === "End") {
+    mostrarDiapositivaPresentacion(diapositivas.length - 1);
   } else if (evento.key === "Escape") {
     salirDePresentacion();
   }
 });
 
-// Si sale de pantalla completa (con Escape del navegador), también se cierra el modo.
 document.addEventListener("fullscreenchange", () => {
   if (!document.fullscreenElement && presentando) salirDePresentacion();
 });
 
-capaPresentacion.addEventListener("click", () => {
+capaPresentacion.addEventListener("click", (evento) => {
+  // Clic derecho no avanza; clic en la ayuda tampoco.
+  if (evento.target.closest("#ayuda-presentacion")) return;
   if (indicePresentacion < diapositivas.length - 1) {
     mostrarDiapositivaPresentacion(indicePresentacion + 1);
   } else {
@@ -434,11 +700,8 @@ window.addEventListener("resize", () => {
   if (presentando) ajustarTamanoPresentacion();
 });
 
-// Aviso al salir con cambios sin guardar.
 window.addEventListener("beforeunload", (evento) => {
-  if (hayCambiosSinGuardar) {
-    evento.preventDefault();
-  }
+  if (hayCambiosSinGuardar) evento.preventDefault();
 });
 
 // ---- Arranque ----

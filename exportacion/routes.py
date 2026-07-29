@@ -155,7 +155,20 @@ def agregar_objeto_fabric(diapositiva_pptx, objeto):
         parrafo = caja.text_frame.paragraphs[0]
         parrafo.text = objeto.get("text", "")
         parrafo.font.size = Pt(objeto.get("fontSize", 32) * escala_y * 0.75)  # px -> pt
+        parrafo.font.bold = objeto.get("fontWeight") == "bold"
+        parrafo.font.italic = objeto.get("fontStyle") == "italic"
         parrafo.font.color.rgb = color_desde_hex(objeto.get("fill"))
+        return
+
+    if tipo == "group":
+        # Las flechas y otros grupos se exportan pieza por pieza, desplazadas.
+        for parte in objeto.get("objects", []):
+            hijo = dict(parte)
+            hijo["left"] = objeto.get("left", 0) + parte.get("left", 0) * escala_x
+            hijo["top"] = objeto.get("top", 0) + parte.get("top", 0) * escala_y
+            hijo["scaleX"] = parte.get("scaleX", 1) * escala_x
+            hijo["scaleY"] = parte.get("scaleY", 1) * escala_y
+            agregar_objeto_fabric(diapositiva_pptx, hijo)
         return
 
     if tipo == "rect":
@@ -167,6 +180,10 @@ def agregar_objeto_fabric(diapositiva_pptx, objeto):
         diametro = objeto.get("radius", 50) * 2
         ancho = Emu(int(diametro * escala_x * EMU_POR_PIXEL))
         alto = Emu(int(diametro * escala_y * EMU_POR_PIXEL))
+    elif tipo == "triangle":
+        forma = MSO_SHAPE.ISOSCELES_TRIANGLE
+        ancho = Emu(int(objeto.get("width", 100) * escala_x * EMU_POR_PIXEL))
+        alto = Emu(int(objeto.get("height", 100) * escala_y * EMU_POR_PIXEL))
     else:
         return  # otros tipos (por ejemplo imágenes de internet) no se exportan
 
@@ -193,10 +210,17 @@ def exportar_pptx(id_proyecto):
         if not diapositiva.contenido_json:
             continue
         try:
-            objetos = json.loads(diapositiva.contenido_json).get("objects", [])
+            datos = json.loads(diapositiva.contenido_json)
         except ValueError:
             continue
-        for objeto in objetos:
+        fondo = datos.get("background")
+        # Fabric guarda el fondo como string o como {"color": "#..."}.
+        color_fondo = fondo if isinstance(fondo, str) else (fondo or {}).get("color")
+        if color_fondo and color_fondo != "#ffffff":
+            relleno = diapositiva_pptx.background.fill
+            relleno.solid()
+            relleno.fore_color.rgb = color_desde_hex(color_fondo)
+        for objeto in datos.get("objects", []):
             agregar_objeto_fabric(diapositiva_pptx, objeto)
 
     archivo = io.BytesIO()

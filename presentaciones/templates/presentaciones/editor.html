@@ -3,58 +3,119 @@
 
 {% block contenido %}
 <style>
+  #editor-presentacion {
+    --slide-w: 960px;
+  }
   #panel-diapositivas {
-    width: 190px;
-    max-height: 70vh;
+    width: 180px;
+    max-height: 72vh;
     overflow-y: auto;
   }
   .miniatura {
     display: block;
     width: 100%;
-    border: 2px solid #dee2e6;
-    border-radius: 6px;
+    border: 2px solid var(--border-dark, #1e293b);
+    border-radius: 8px;
     padding: 0;
     background: white;
     overflow: hidden;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.12);
   }
   .miniatura.activa {
-    border-color: #0d6efd;
+    border-color: var(--primary-btn, #8b5cf6);
+    box-shadow: 3px 3px 0 rgba(139, 92, 246, 0.35);
   }
-  .miniatura img {
-    display: block;
-    width: 100%;
-  }
+  .miniatura img { display: block; width: 100%; }
   .miniatura .numero {
     display: block;
     font-size: 0.75rem;
-    color: #6c757d;
-    padding: 2px;
+    color: #64748b;
+    padding: 2px 6px;
+    text-align: left;
   }
-  /* Modo presentación: capa negra a pantalla completa con la diapositiva centrada. */
+  .barra-herramientas {
+    background: white;
+    border: 2px solid var(--border-dark, #1e293b);
+    border-radius: 12px;
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.12);
+    padding: 10px 12px;
+  }
+  .grupo-herramientas {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+  .etiqueta-grupo {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    margin-right: 2px;
+  }
+  .tema-fondo {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 2px solid var(--border-dark, #1e293b);
+    padding: 0;
+  }
+  .tema-fondo.activo { outline: 3px solid var(--primary-btn, #8b5cf6); outline-offset: 1px; }
+  .marco-lienzo {
+    width: var(--slide-w);
+    border: 2px solid var(--border-dark, #1e293b);
+    border-radius: 4px;
+    box-shadow: 6px 6px 0 rgba(0,0,0,0.12);
+    overflow: hidden;
+  }
+  /* Modo presentación profesional */
   #modo-presentacion {
     position: fixed;
     inset: 0;
-    background: black;
+    background: #0f172a;
     z-index: 2000;
     display: none;
     justify-content: center;
     align-items: center;
   }
   #modo-presentacion.activo { display: flex; }
+  #lienzo-presentacion {
+    opacity: 1;
+    transition: opacity 0.28s ease;
+  }
+  #lienzo-presentacion.ocultando { opacity: 0; }
+  #barra-progreso-presentacion {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 4px;
+    background: var(--primary-btn, #8b5cf6);
+    width: 0%;
+    transition: width 0.25s ease;
+  }
   #contador-presentacion {
     position: absolute;
-    bottom: 16px;
-    right: 20px;
-    color: #aaa;
-    font-size: 0.9rem;
+    bottom: 18px;
+    right: 24px;
+    color: #94a3b8;
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+  #ayuda-presentacion {
+    position: absolute;
+    bottom: 18px;
+    left: 24px;
+    color: #64748b;
+    font-size: 0.85rem;
   }
 </style>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
     <h1 class="h4 mb-0">Presentación de «{{ proyecto.nombre }}»</h1>
-    <a class="text-muted small" href="{{ url_for('proyectos.ver_proyecto', id_proyecto=proyecto.id) }}">
-      Volver al proyecto
+    <a class="text-muted small" href="{{ url_for('notas.ver_notas', id_proyecto=proyecto.id) }}">
+      ← Volver a la pizarra
     </a>
   </div>
   <div class="d-flex align-items-center gap-2">
@@ -66,60 +127,95 @@
 </div>
 
 <div id="editor-presentacion" data-id-presentacion="{{ presentacion.id }}" data-id-proyecto="{{ proyecto.id }}">
-  <div class="card shadow-sm mb-2">
-    <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
-      <button id="boton-texto" class="btn btn-sm btn-outline-primary" type="button">Texto</button>
-      <select id="selector-tamano" class="form-select form-select-sm" style="width: auto;" title="Tamaño de letra">
-        <option value="20">Pequeña</option>
-        <option value="32" selected>Normal</option>
-        <option value="48">Grande</option>
-        <option value="64">Título</option>
-      </select>
+  <div class="barra-herramientas mb-2">
+    <div class="grupo-herramientas mb-2">
+      <span class="etiqueta-grupo">Plantilla</span>
+      <button id="plantilla-portada" class="btn btn-sm btn-outline-primary" type="button" title="Borra el contenido actual y aplica la plantilla">Portada</button>
+      <button id="plantilla-lista" class="btn btn-sm btn-outline-primary" type="button">Lista</button>
+      <button id="plantilla-columnas" class="btn btn-sm btn-outline-primary" type="button">2 columnas</button>
+      <button id="plantilla-cita" class="btn btn-sm btn-outline-primary" type="button">Cita</button>
       <span class="vr mx-1"></span>
+      <span class="etiqueta-grupo">Tema</span>
+      <button class="tema-fondo activo" type="button" data-fondo="#ffffff" data-acento="#8b5cf6" style="background:#ffffff" title="Claro"></button>
+      <button class="tema-fondo" type="button" data-fondo="#0f172a" data-acento="#fde047" style="background:#0f172a" title="Oscuro"></button>
+      <button class="tema-fondo" type="button" data-fondo="#ede9fe" data-acento="#7c3aed" style="background:#ede9fe" title="Violeta"></button>
+      <button class="tema-fondo" type="button" data-fondo="#ecfdf5" data-acento="#059669" style="background:#ecfdf5" title="Verde"></button>
+      <button class="tema-fondo" type="button" data-fondo="#fff7ed" data-acento="#ea580c" style="background:#fff7ed" title="Naranja"></button>
+    </div>
+
+    <div class="grupo-herramientas mb-2">
+      <span class="etiqueta-grupo">Insertar</span>
+      <button id="boton-texto" class="btn btn-sm btn-outline-primary" type="button">Texto</button>
       <button id="boton-rectangulo" class="btn btn-sm btn-outline-primary" type="button">Rectángulo</button>
       <button id="boton-circulo" class="btn btn-sm btn-outline-primary" type="button">Círculo</button>
       <button id="boton-triangulo" class="btn btn-sm btn-outline-primary" type="button">Triángulo</button>
+      <button id="boton-flecha" class="btn btn-sm btn-outline-primary" type="button">Flecha</button>
       <button id="boton-linea" class="btn btn-sm btn-outline-primary" type="button">Línea</button>
-      <button id="boton-imagen" class="btn btn-sm btn-outline-primary" type="button">Imagen</button>
-      <label class="d-flex align-items-center gap-1 small mb-0" title="Color del objeto seleccionado">
+      <button id="boton-imagen" class="btn btn-sm btn-outline-primary" type="button">Imagen URL</button>
+      <label class="btn btn-sm btn-outline-primary mb-0" for="entrada-imagen-archivo">Subir imagen</label>
+      <input id="entrada-imagen-archivo" type="file" accept="image/*" class="d-none">
+    </div>
+
+    <div class="grupo-herramientas">
+      <span class="etiqueta-grupo">Estilo</span>
+      <select id="selector-fuente" class="form-select form-select-sm" style="width: auto;" title="Fuente">
+        <option value="Nunito" selected>Nunito</option>
+        <option value="Caveat">Caveat</option>
+        <option value="Arial">Arial</option>
+        <option value="Georgia">Georgia</option>
+      </select>
+      <select id="selector-tamano" class="form-select form-select-sm" style="width: auto;" title="Tamaño">
+        <option value="20">20</option>
+        <option value="28" selected>28</option>
+        <option value="36">36</option>
+        <option value="48">48</option>
+        <option value="64">64</option>
+        <option value="80">80</option>
+      </select>
+      <button id="boton-negrita" class="btn btn-sm btn-outline-secondary" type="button" title="Negrita"><strong>B</strong></button>
+      <button id="boton-cursiva" class="btn btn-sm btn-outline-secondary" type="button" title="Cursiva"><em>I</em></button>
+      <button id="boton-alinear-izq" class="btn btn-sm btn-outline-secondary" type="button" title="Alinear izquierda">⫷</button>
+      <button id="boton-alinear-centro" class="btn btn-sm btn-outline-secondary" type="button" title="Centrar">☰</button>
+      <button id="boton-alinear-der" class="btn btn-sm btn-outline-secondary" type="button" title="Alinear derecha">⫸</button>
+      <label class="d-flex align-items-center gap-1 small mb-0" title="Color del objeto">
         Color
-        <input id="selector-color" type="color" value="#2c6ecb" class="form-control form-control-color">
+        <input id="selector-color" type="color" value="#1e293b" class="form-control form-control-color">
       </label>
-      <label class="d-flex align-items-center gap-1 small mb-0" title="Color de fondo de la diapositiva">
+      <label class="d-flex align-items-center gap-1 small mb-0" title="Fondo de la diapositiva">
         Fondo
         <input id="selector-fondo" type="color" value="#ffffff" class="form-control form-control-color">
       </label>
-      <button id="boton-eliminar-objeto" class="btn btn-sm btn-outline-danger" type="button">Eliminar objeto</button>
+      <span class="vr mx-1"></span>
+      <button id="boton-adelante" class="btn btn-sm btn-outline-secondary" type="button" title="Traer al frente">↑</button>
+      <button id="boton-atras" class="btn btn-sm btn-outline-secondary" type="button" title="Enviar atrás">↓</button>
+      <button id="boton-eliminar-objeto" class="btn btn-sm btn-outline-danger" type="button">Borrar</button>
     </div>
   </div>
 
   <div class="d-flex gap-2 align-items-start">
-    <div id="panel-diapositivas" class="d-flex flex-column gap-2 flex-shrink-0">
-      {# Aquí van las miniaturas; las dibuja presentaciones.js #}
-    </div>
+    <div id="panel-diapositivas" class="d-flex flex-column gap-2 flex-shrink-0"></div>
 
     <div class="flex-grow-1">
-      <div class="card shadow-sm mb-2">
-        <div class="card-body d-flex justify-content-center bg-light p-3" style="overflow-x: auto;">
-          <div class="border shadow" style="width: 960px;">
-            <canvas id="lienzo" width="960" height="540"></canvas>
-          </div>
+      <div class="d-flex justify-content-center bg-transparent p-2 mb-2" style="overflow-x: auto;">
+        <div class="marco-lienzo">
+          <canvas id="lienzo" width="960" height="540"></canvas>
         </div>
       </div>
-      <div class="d-flex gap-1 justify-content-center">
-        <button id="boton-nueva-diapositiva" class="btn btn-sm btn-success" type="button">+ Diapositiva</button>
-        <button id="boton-duplicar-diapositiva" class="btn btn-sm btn-outline-success" type="button">Duplicar</button>
+      <div class="d-flex gap-1 justify-content-center flex-wrap">
+        <button id="boton-nueva-diapositiva" class="btn btn-sm btn-primary" type="button">+ Diapositiva</button>
+        <button id="boton-duplicar-diapositiva" class="btn btn-sm btn-outline-primary" type="button">Duplicar</button>
         <button id="boton-mover-izquierda" class="btn btn-sm btn-outline-secondary" type="button" title="Mover antes">←</button>
         <button id="boton-mover-derecha" class="btn btn-sm btn-outline-secondary" type="button" title="Mover después">→</button>
-        <button id="boton-borrar-diapositiva" class="btn btn-sm btn-outline-danger" type="button">Borrar</button>
+        <button id="boton-borrar-diapositiva" class="btn btn-sm btn-outline-danger" type="button">Borrar diapositiva</button>
       </div>
     </div>
   </div>
 </div>
 
-{# Modo presentación: se navega con las flechas del teclado y se sale con Escape. #}
 <div id="modo-presentacion">
   <canvas id="lienzo-presentacion" width="960" height="540"></canvas>
+  <div id="barra-progreso-presentacion"></div>
+  <span id="ayuda-presentacion">← → espacio · Esc salir</span>
   <span id="contador-presentacion"></span>
 </div>
 
