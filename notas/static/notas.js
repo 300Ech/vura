@@ -798,29 +798,9 @@ window.socketChat.on("cursor_movido", (datos) => {
 
 
 // ---- Navegación infinita (Zoom y Paneo) ----
-const btnZoomIn = document.getElementById("btn-zoom-in");
-const btnZoomOut = document.getElementById("btn-zoom-out");
-const labelZoom = document.getElementById("porcentaje-zoom");
 
-function setZoomPizarra(nuevoZoom) {
-  if (nuevoZoom > 5) nuevoZoom = 5;
-  if (nuevoZoom < 0.1) nuevoZoom = 0.1;
-  const center = { x: zonaPizarra.clientWidth / 2, y: zonaPizarra.clientHeight / 2 };
-  lienzo.zoomToPoint(center, nuevoZoom);
-  actualizarUICursosYZoom();
-}
-
-if (btnZoomIn) btnZoomIn.addEventListener("click", () => setZoomPizarra(lienzo.getZoom() * 1.2));
-if (btnZoomOut) btnZoomOut.addEventListener("click", () => setZoomPizarra(lienzo.getZoom() / 1.2));
-if (labelZoom) {
-  labelZoom.addEventListener("click", () => {
-    lienzo.setViewportTransform([1, 0, 0, 1, 0, 0]);
-    actualizarUICursosYZoom();
-  });
-}
 
 function actualizarUICursosYZoom() {
-  if (labelZoom) labelZoom.textContent = Math.round(lienzo.getZoom() * 100) + "%";
   // Reposicionar cursores remotos según el zoom/pan actual
   for (const [id, cursor] of cursores.entries()) {
     if (cursor.datosOriginales) {
@@ -835,22 +815,14 @@ function actualizarUICursosYZoom() {
 // Eventos de rueda (Mouse Wheel / Trackpad)
 lienzo.on('mouse:wheel', function(opt) {
   const delta = opt.e.deltaY;
-  if (opt.e.ctrlKey) {
-    // Zoom in/out
-    let zoom = lienzo.getZoom();
-    zoom *= 0.999 ** delta;
-    if (zoom > 5) zoom = 5;
-    if (zoom < 0.1) zoom = 0.1;
-    lienzo.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
-    opt.e.preventDefault();
-    opt.e.stopPropagation();
-  } else {
-    // Pan
-    const vpt = this.viewportTransform;
-    vpt[4] -= opt.e.deltaX;
-    vpt[5] -= opt.e.deltaY;
-    this.requestRenderAll();
-  }
+  // Zoom in/out directamente con la rueda
+  let zoom = lienzo.getZoom();
+  zoom *= 0.999 ** delta;
+  if (zoom > 5) zoom = 5;
+  if (zoom < 0.1) zoom = 0.1;
+  lienzo.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
+  opt.e.preventDefault();
+  opt.e.stopPropagation();
   actualizarUICursosYZoom();
 });
 
