@@ -117,7 +117,6 @@ h1, h2, h3, h4, h5, h6, .brand-text {
 .sidebar-link:hover, .sidebar-link.active {
   background-color: var(--sticky-yellow);
   color: var(--border-dark);
-  transform: translateY(-2px);
   box-shadow: var(--shadow-hard-sm);
   border: 2px solid var(--border-dark);
 }
@@ -150,7 +149,6 @@ h1, h2, h3, h4, h5, h6, .brand-text {
 }
 
 .card:hover, .tarjeta-vura:hover {
-  transform: translateY(-3px) rotate(0.5deg);
   box-shadow: var(--shadow-hard-lg) !important;
 }
 
@@ -199,7 +197,6 @@ h1, h2, h3, h4, h5, h6, .brand-text {
 
 .btn-primary:hover {
   background-color: #7c3aed !important;
-  transform: translateY(-2px);
   box-shadow: var(--shadow-hard) !important;
 }
 
@@ -215,7 +212,6 @@ h1, h2, h3, h4, h5, h6, .brand-text {
 
 .btn-outline-primary:hover {
   background-color: var(--sticky-yellow) !important;
-  transform: translateY(-2px);
   box-shadow: var(--shadow-hard) !important;
 }
 
