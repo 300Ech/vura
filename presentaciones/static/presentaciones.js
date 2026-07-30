@@ -34,8 +34,8 @@ let zoomAjustado = true;
 
 function ajustarEscalaEditor() {
   if (!marcoLienzo || !contenedorLienzoEscalado) return;
-  const padre = contenedorLienzoEscalado.parentElement;
-  if (zoomAjustado) escalaEditor = Math.min(1, (padre.clientWidth - 16) / ANCHO);
+  const areaScroll = document.querySelector('.lienzo-scroll-area') || contenedorLienzoEscalado.parentElement;
+  if (zoomAjustado) escalaEditor = Math.min(1, (areaScroll.clientWidth - 32 - 160) / ANCHO);
   const escala = Math.max(0.25, Math.min(2, escalaEditor));
   marcoLienzo.style.transformOrigin = "top left";
   marcoLienzo.style.transform = `scale(${escala})`;

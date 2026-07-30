@@ -212,17 +212,7 @@
     height: 100%;
     margin: -24px; /* Ocupar el padding del main-content */
   }
-  .lienzo-wrapper {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    background: var(--bg-color);
-  }
-  .lienzo-area {
-    flex-grow: 1;
-    display: flex;
-    overflow: auto;
-  }
+
   .panel-categoria {
     display: flex;
     flex-direction: column;
@@ -405,6 +395,115 @@
     #ayuda-presentacion { display: none; }
     #aviso-diapos-movil { margin-bottom: 10px; }
   }
+
+  /* --- Estilos Rediseñados Estilo Canva --- */
+  .editor-presentacion-layout {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+  
+  .editor-sidebar-container {
+    display: flex;
+    height: 100%;
+    background: #ffffff;
+    border-right: 1px solid var(--border-light);
+    z-index: 10;
+  }
+  
+  .categorias-barra {
+    display: flex;
+    flex-direction: column;
+    width: 72px;
+    background: #0f172a; /* Oscuro elegante */
+    padding-top: 12px;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  
+  .cat-tab {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 0.7rem;
+    padding: 10px 0;
+    width: 60px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  
+  .cat-tab:hover {
+    color: #ffffff;
+    background: rgba(255,255,255,0.1);
+  }
+  
+  .cat-tab.activa {
+    color: #ffffff;
+    background: rgba(255,255,255,0.2);
+  }
+  
+  .cat-tab .icono-tab {
+    font-size: 1.4rem;
+    margin-bottom: 4px;
+  }
+  
+  .paneles-herramientas {
+    width: 240px;
+    background: #ffffff;
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .lienzo-wrapper {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-color);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .barra-top-editor {
+    background: #ffffff;
+    border-bottom: 1px solid var(--border-light);
+    padding: 12px 20px;
+    z-index: 20;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+  }
+  
+  .lienzo-scroll-area {
+    flex-grow: 1;
+    overflow: auto; /* IMPORTANTE: Solo esta área hace scroll */
+    display: flex;
+    flex-direction: row;
+  }
+  
+  .barra-inferior-fija {
+    background: #ffffff;
+    border-top: 1px solid var(--border-light);
+    z-index: 20;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+  }
+  
+  #panel-diapositivas {
+    width: 160px;
+    background: #f8fafc;
+    border-right: 1px solid var(--border-light);
+    overflow-y: auto;
+    padding: 12px;
+  }
 </style>
 
 <div id="aviso-diapos-movil" class="aviso-movil-light mt-3 mx-3">
@@ -412,86 +511,106 @@
   <button type="button" aria-label="Cerrar" onclick="this.parentElement.remove()">×</button>
 </div>
 
-<div id="editor-presentacion" data-id-presentacion="{{ presentacion.id }}" data-id-proyecto="{{ proyecto.id }}">
-  <!-- Barra lateral de Herramientas -->
-  <div class="barra-lateral-secundaria">
-    <div class="p-3 border-bottom d-flex align-items-center gap-2">
-      <h1 class="h6 mb-0 text-truncate" title="Presentación de «{{ proyecto.nombre }}»">«{{ proyecto.nombre }}»</h1>
+<div id="editor-presentacion" class="editor-presentacion-layout" data-id-presentacion="{{ presentacion.id }}" data-id-proyecto="{{ proyecto.id }}">
+  <!-- Barra lateral estilo Canva -->
+  <div class="editor-sidebar-container">
+    <!-- Pestañas verticales -->
+    <div class="categorias-barra">
+      <button class="cat-tab activa" type="button" data-cat="plantillas"><span class="icono-tab">🎨</span>Plantillas</button>
+      <button class="cat-tab" type="button" data-cat="texto"><span class="icono-tab">✏️</span>Texto</button>
+      <button class="cat-tab" type="button" data-cat="formas"><span class="icono-tab">⬛</span>Formas</button>
+      <button class="cat-tab" type="button" data-cat="iconos"><span class="icono-tab">⭐</span>Iconos</button>
+      <button class="cat-tab" type="button" data-cat="componentes"><span class="icono-tab">🧩</span>Comp</button>
+      <button class="cat-tab" type="button" data-cat="imagen"><span class="icono-tab">🖼️</span>Imagen</button>
     </div>
-    
-    <div class="p-3">
-      <button id="boton-presentar" class="btn btn-primary w-100 mb-3" type="button">▶ Presentar</button>
-      
-      <div class="categorias-barra mb-2">
-        <button class="cat-tab activa" type="button" data-cat="plantillas">🎨 Plantillas</button>
-        <button class="cat-tab" type="button" data-cat="texto">✏️ Texto</button>
-        <button class="cat-tab" type="button" data-cat="formas">⬛ Formas</button>
-        <button class="cat-tab" type="button" data-cat="iconos">⭐ Iconos</button>
-        <button class="cat-tab" type="button" data-cat="componentes">🧩 Componentes</button>
-        <button class="cat-tab" type="button" data-cat="imagen">🖼️ Imagen</button>
+
+    <!-- Panel de opciones desplegadas -->
+    <div class="paneles-herramientas">
+      <div class="mb-4 d-flex justify-content-between align-items-center">
+        <h2 class="h6 mb-0 text-truncate" title="«{{ proyecto.nombre }}»">«{{ proyecto.nombre }}»</h2>
       </div>
+      
+      <button id="boton-presentar" class="btn btn-primary w-100 mb-4 shadow-sm" type="button">▶ Presentar</button>
 
       <div class="panel-categoria" data-panel="plantillas">
-        <button id="boton-plantillas" class="btn btn-sm btn-outline-primary" type="button">Abrir plantillas y temas</button>
+        <h3 class="h6 text-muted mb-3">Plantillas</h3>
+        <button id="boton-plantillas" class="btn btn-sm btn-outline-primary w-100" type="button">Abrir biblioteca</button>
       </div>
+      
       <div class="panel-categoria d-none" data-panel="texto">
-        <button id="boton-titulo" class="btn btn-sm btn-outline-primary" type="button">+ Título</button>
-        <button id="boton-subtitulo" class="btn btn-sm btn-outline-primary" type="button">+ Subtítulo</button>
-        <button id="boton-texto" class="btn btn-sm btn-outline-primary" type="button">+ Cuerpo</button>
+        <h3 class="h6 text-muted mb-3">Agregar texto</h3>
+        <div class="d-flex flex-column gap-2">
+          <button id="boton-titulo" class="btn btn-outline-secondary text-start fs-4 fw-bold p-2" type="button">Agregar un título</button>
+          <button id="boton-subtitulo" class="btn btn-outline-secondary text-start fs-5 fw-semibold p-2" type="button">Agregar un subtítulo</button>
+          <button id="boton-texto" class="btn btn-outline-secondary text-start fs-6 p-2" type="button">Agregar texto</button>
+        </div>
       </div>
+      
       <div class="panel-categoria d-none" data-panel="formas">
-        <button id="boton-rectangulo" class="btn btn-sm btn-outline-primary" type="button">Rectángulo</button>
-        <button id="boton-circulo" class="btn btn-sm btn-outline-primary" type="button">Círculo</button>
-        <button id="boton-triangulo" class="btn btn-sm btn-outline-primary" type="button">Triángulo</button>
-        <button id="boton-flecha" class="btn btn-sm btn-outline-primary" type="button">Flecha</button>
-        <button id="boton-linea" class="btn btn-sm btn-outline-primary" type="button">Línea</button>
+        <h3 class="h6 text-muted mb-3">Líneas y formas</h3>
+        <div class="d-flex flex-wrap gap-2">
+          <button id="boton-rectangulo" class="btn btn-outline-secondary p-3" type="button" title="Rectángulo">⬛</button>
+          <button id="boton-circulo" class="btn btn-outline-secondary p-3" type="button" title="Círculo">⬤</button>
+          <button id="boton-triangulo" class="btn btn-outline-secondary p-3" type="button" title="Triángulo">▲</button>
+          <button id="boton-flecha" class="btn btn-outline-secondary p-3" type="button" title="Flecha">➔</button>
+          <button id="boton-linea" class="btn btn-outline-secondary p-3" type="button" title="Línea">━</button>
+        </div>
       </div>
+      
       <div class="panel-categoria d-none" data-panel="iconos">
-        <button id="boton-iconos" class="btn btn-sm btn-outline-primary" type="button">Galería de iconos</button>
+        <h3 class="h6 text-muted mb-3">Iconos</h3>
+        <button id="boton-iconos" class="btn btn-sm btn-outline-primary w-100" type="button">Galería de iconos</button>
       </div>
+      
       <div class="panel-categoria d-none" data-panel="componentes">
-        <button class="btn btn-sm btn-outline-primary comp" type="button" data-comp="tarjeta">Tarjeta</button>
-        <button class="btn btn-sm btn-outline-primary comp" type="button" data-comp="destacado">Caja destacada</button>
-        <button class="btn btn-sm btn-outline-primary comp" type="button" data-comp="estadistica">Estadística</button>
-        <button class="btn btn-sm btn-outline-primary comp" type="button" data-comp="viñeta">Punto con texto</button>
-        <button class="btn btn-sm btn-outline-primary comp" type="button" data-comp="paso">Paso numerado</button>
-        <button class="btn btn-sm btn-outline-primary comp" type="button" data-comp="boton">Botón</button>
+        <h3 class="h6 text-muted mb-3">Interactivos</h3>
+        <div class="d-flex flex-column gap-2">
+          <button class="btn btn-sm btn-outline-primary comp text-start" type="button" data-comp="tarjeta">🗂️ Tarjeta</button>
+          <button class="btn btn-sm btn-outline-primary comp text-start" type="button" data-comp="destacado">💡 Caja destacada</button>
+          <button class="btn btn-sm btn-outline-primary comp text-start" type="button" data-comp="estadistica">📊 Estadística</button>
+          <button class="btn btn-sm btn-outline-primary comp text-start" type="button" data-comp="viñeta">✅ Punto con texto</button>
+          <button class="btn btn-sm btn-outline-primary comp text-start" type="button" data-comp="paso">🔢 Paso numerado</button>
+          <button class="btn btn-sm btn-outline-primary comp text-start" type="button" data-comp="boton">🔘 Botón</button>
+        </div>
       </div>
+      
       <div class="panel-categoria d-none" data-panel="imagen">
-        <button id="boton-imagen" class="btn btn-sm btn-outline-primary" type="button">Desde URL</button>
-        <label class="btn btn-sm btn-outline-primary mb-0 text-center" for="entrada-imagen-archivo">Subir imagen</label>
-        <input id="entrada-imagen-archivo" type="file" accept="image/*" class="d-none">
+        <h3 class="h6 text-muted mb-3">Imágenes</h3>
+        <div class="d-flex flex-column gap-2">
+          <button id="boton-imagen" class="btn btn-sm btn-outline-primary" type="button">🔗 Desde URL</button>
+          <label class="btn btn-sm btn-outline-primary mb-0 text-center" for="entrada-imagen-archivo">⬆️ Subir archivo</label>
+          <input id="entrada-imagen-archivo" type="file" accept="image/*" class="d-none">
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Contenido principal (Barra top + Lienzo + Diapositivas) -->
+  <!-- Contenido principal -->
   <div class="lienzo-wrapper">
-    <!-- Barra Superior -->
-    <div class="barra-top-editor d-flex flex-wrap gap-3">
+    <!-- Barra Superior (Contextual/Herramientas) -->
+    <div class="barra-top-editor d-flex flex-wrap gap-3 align-items-center">
       <div class="acciones-editor">
-        <button id="boton-deshacer" class="btn btn-sm btn-outline-secondary" type="button" title="Deshacer" disabled>↶</button>
-        <button id="boton-rehacer" class="btn btn-sm btn-outline-secondary" type="button" title="Rehacer" disabled>↷</button>
+        <button id="boton-deshacer" class="btn btn-sm btn-light border-0" type="button" title="Deshacer" disabled>↶</button>
+        <button id="boton-rehacer" class="btn btn-sm btn-light border-0" type="button" title="Rehacer" disabled>↷</button>
         <span class="vr mx-1"></span>
-        <button id="boton-duplicar-objeto" class="btn btn-sm btn-outline-secondary" type="button" title="Duplicar">⧉</button>
-        <button id="boton-bloquear" class="btn btn-sm btn-outline-secondary" type="button" title="Bloquear">🔓</button>
+        <button id="boton-duplicar-objeto" class="btn btn-sm btn-light border-0" type="button" title="Duplicar">⧉</button>
+        <button id="boton-bloquear" class="btn btn-sm btn-light border-0" type="button" title="Bloquear">🔓</button>
       </div>
 
       <div class="vr"></div>
 
-      <div class="grupo-herramientas">
-        <span class="etiqueta-grupo">Estilo</span>
-        <span id="pista-seleccion" class="text-muted small">👆 Seleccioná un objeto</span>
+      <div class="grupo-herramientas d-flex align-items-center gap-2">
+        <span id="pista-seleccion" class="text-muted small fw-medium">👆 Seleccioná un objeto</span>
         
-        <span class="estilo estilo-texto d-none">
-          <select id="selector-fuente" class="form-select form-select-sm" style="width: auto;" title="Fuente">
+        <span class="estilo estilo-texto d-none d-flex gap-2">
+          <select id="selector-fuente" class="form-select form-select-sm border-0 bg-light" style="width: auto;" title="Fuente">
             <option value="Nunito" selected>Nunito</option>
             <option value="Poppins">Poppins</option>
             <option value="Caveat">Caveat</option>
             <option value="Arial">Arial</option>
             <option value="Georgia">Georgia</option>
           </select>
-          <select id="selector-tamano" class="form-select form-select-sm" style="width: auto;" title="Tamaño">
+          <select id="selector-tamano" class="form-select form-select-sm border-0 bg-light" style="width: auto;" title="Tamaño">
             <option value="20">20</option>
             <option value="28" selected>28</option>
             <option value="36">36</option>
@@ -499,21 +618,25 @@
             <option value="64">64</option>
             <option value="80">80</option>
           </select>
-          <button id="boton-negrita" class="btn btn-sm btn-outline-secondary" type="button"><strong>B</strong></button>
-          <button id="boton-cursiva" class="btn btn-sm btn-outline-secondary" type="button"><em>I</em></button>
-          <button id="boton-alinear-izq" class="btn btn-sm btn-outline-secondary" type="button">⫷</button>
-          <button id="boton-alinear-centro" class="btn btn-sm btn-outline-secondary" type="button">☰</button>
-          <button id="boton-alinear-der" class="btn btn-sm btn-outline-secondary" type="button">⫸</button>
+          <div class="btn-group">
+            <button id="boton-negrita" class="btn btn-sm btn-light border-0" type="button"><strong>B</strong></button>
+            <button id="boton-cursiva" class="btn btn-sm btn-light border-0" type="button"><em>I</em></button>
+          </div>
+          <div class="btn-group">
+            <button id="boton-alinear-izq" class="btn btn-sm btn-light border-0" type="button">⫷</button>
+            <button id="boton-alinear-centro" class="btn btn-sm btn-light border-0" type="button">☰</button>
+            <button id="boton-alinear-der" class="btn btn-sm btn-light border-0" type="button">⫸</button>
+          </div>
         </span>
 
-        <span class="estilo estilo-objeto d-none">
-          <label class="d-flex align-items-center gap-1 small mb-0">
+        <span class="estilo estilo-objeto d-none d-flex gap-2 align-items-center">
+          <label class="d-flex align-items-center gap-1 small mb-0 fw-medium">
             Color
-            <input id="selector-color" type="color" value="#1e293b" class="form-control form-control-color" style="width:28px;height:28px;padding:0;border-radius:4px;">
+            <input id="selector-color" type="color" value="#1e293b" class="form-control form-control-color border-0 p-0" style="width:28px;height:28px;border-radius:4px;cursor:pointer;">
           </label>
           <span class="vr mx-1"></span>
           <div class="dropdown d-inline-block">
-            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Reorganizar capas">
+            <button class="btn btn-sm btn-light border-0 dropdown-toggle fw-medium" type="button" data-bs-toggle="dropdown" title="Reorganizar capas">
               Capas
             </button>
             <ul class="dropdown-menu shadow-sm" style="font-size: 0.9rem;">
@@ -521,15 +644,15 @@
               <li><button class="dropdown-item" type="button" id="boton-atras">Enviar atrás</button></li>
             </ul>
           </div>
-          <button id="boton-eliminar-objeto" class="btn btn-sm btn-outline-danger" type="button">Borrar</button>
+          <button id="boton-eliminar-objeto" class="btn btn-sm btn-light text-danger border-0" type="button" title="Borrar">🗑️</button>
         </span>
       </div>
 
       <div class="vr ms-auto"></div>
 
-      <label class="d-flex align-items-center gap-1 small mb-0">
+      <label class="d-flex align-items-center gap-1 small mb-0 fw-medium">
         Fondo
-        <input id="selector-fondo" type="color" value="#ffffff" class="form-control form-control-color" style="width:28px;height:28px;padding:0;border-radius:4px;">
+        <input id="selector-fondo" type="color" value="#ffffff" class="form-control form-control-color border-0 p-0" style="width:28px;height:28px;border-radius:4px;cursor:pointer;">
       </label>
       
       <span id="estado-guardado" class="text-muted small ms-2 d-none d-md-inline" style="line-height:28px;">
@@ -537,16 +660,16 @@
       </span>
     </div>
 
-    <!-- Área de Lienzo y Diapositivas -->
-    <div class="lienzo-area">
-      <!-- Miniaturas -->
-      <div id="panel-diapositivas" class="d-flex flex-column gap-2 p-3 border-end bg-white" style="width:160px; overflow-y:auto;">
+    <!-- Área de Lienzo (Scroll Independiente) -->
+    <div class="lienzo-scroll-area">
+      <!-- Miniaturas en la izquierda del canvas -->
+      <div id="panel-diapositivas">
         <!-- Javascript renders miniaturas here -->
       </div>
       
-      <!-- Lienzo principal -->
-      <div class="flex-grow-1 d-flex flex-column" style="overflow:auto; background:var(--bg-color);">
-        <div class="d-flex justify-content-center p-4">
+      <!-- Contenedor central infinito -->
+      <div class="flex-grow-1 d-flex flex-column" style="min-width: fit-content; min-height: fit-content; background: var(--bg-color);">
+        <div class="d-flex justify-content-center p-5">
           <div id="contenedor-lienzo-escalado">
             <div class="marco-lienzo">
               <canvas id="lienzo" width="960" height="540"></canvas>
@@ -560,28 +683,26 @@
             </div>
           </div>
         </div>
-        
-        <!-- Botonera inferior -->
-        <div class="d-flex gap-1 justify-content-center align-items-center flex-wrap p-2 pb-4">
-          <button id="boton-nueva-diapositiva" class="btn btn-sm btn-primary" type="button">+ Diapositiva</button>
-          <button id="boton-duplicar-diapositiva" class="btn btn-sm btn-outline-primary" type="button">Duplicar</button>
-          <button id="boton-mover-izquierda" class="btn btn-sm btn-outline-secondary" type="button" title="Mover antes">←</button>
-          <button id="boton-mover-derecha" class="btn btn-sm btn-outline-secondary" type="button" title="Mover después">→</button>
-          <button id="boton-borrar-diapositiva" class="btn btn-sm btn-outline-danger" type="button">Borrar</button>
-          <span class="vr mx-1"></span>
-          <button id="boton-zoom-menos" class="btn btn-sm btn-outline-secondary" type="button" title="Alejar">−</button>
-          <span id="porcentaje-zoom" class="small fw-bold text-center" style="min-width: 44px;">100%</span>
-          <button id="boton-zoom-mas" class="btn btn-sm btn-outline-secondary" type="button" title="Acercar">+</button>
-          <button id="boton-zoom-ajustar" class="btn btn-sm btn-outline-secondary" type="button" title="Ajustar">Ajustar</button>
-        </div>
-        
-        <!-- Notas del presentador -->
-        <div class="px-4 pb-4 mx-auto" style="max-width: 960px; width: 100%;">
-          <label for="campo-notas" class="etiqueta-grupo d-block mb-1">
-            🎤 Notas del presentador
-          </label>
-          <textarea id="campo-notas" class="form-control bg-white" rows="2" placeholder="Apuntá aquí lo que vas a decir..."></textarea>
-        </div>
+      </div>
+    </div>
+
+    <!-- Barra Inferior Fija (Zoom y Controles) -->
+    <div class="barra-inferior-fija">
+      <div class="d-flex gap-2 align-items-center">
+        <button id="boton-nueva-diapositiva" class="btn btn-sm btn-primary shadow-sm" type="button">+ Nueva</button>
+        <button id="boton-duplicar-diapositiva" class="btn btn-sm btn-light border-0" type="button" title="Duplicar">⧉</button>
+        <button id="boton-borrar-diapositiva" class="btn btn-sm btn-light text-danger border-0" type="button" title="Borrar">🗑️</button>
+      </div>
+      
+      <div class="d-flex align-items-center mx-auto" style="max-width: 600px; width: 100%;">
+        <textarea id="campo-notas" class="form-control bg-light border-0 flex-grow-1 py-1" rows="1" placeholder="🎤 Apuntá aquí tus notas del presentador..." style="resize:none; font-size: 0.9rem; line-height: 1.5;"></textarea>
+      </div>
+
+      <div class="d-flex gap-1 align-items-center">
+        <button id="boton-zoom-menos" class="btn btn-sm btn-light border-0" type="button" title="Alejar">−</button>
+        <span id="porcentaje-zoom" class="small fw-bold text-center" style="min-width: 44px; user-select:none;">100%</span>
+        <button id="boton-zoom-mas" class="btn btn-sm btn-light border-0" type="button" title="Acercar">+</button>
+        <button id="boton-zoom-ajustar" class="btn btn-sm btn-light border-0 text-primary fw-medium" type="button" title="Ajustar">Ajustar</button>
       </div>
     </div>
   </div>
