@@ -205,8 +205,9 @@
   }
   #editor-presentacion {
     display: flex;
-    height: 100%;
+    height: calc(100vh + 48px); /* 48px = compensar padding 24px arriba + 24px abajo del main-content */
     margin: -24px; /* Ocupar el padding del main-content */
+    overflow: hidden;
   }
 
   .panel-categoria {
