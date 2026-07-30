@@ -1217,6 +1217,8 @@ alCambiarSeleccion();
 
 // ---- Atajos de teclado ----
 
+let presentando = false;
+
 document.addEventListener("keydown", (evento) => {
   if (presentando) return;
   const objeto = lienzo.getActiveObject();
@@ -1388,8 +1390,8 @@ function moverDiapositiva(desplazamiento) {
   dibujarPanel();
 }
 
-document.getElementById("boton-mover-izquierda").addEventListener("click", () => moverDiapositiva(-1));
-document.getElementById("boton-mover-derecha").addEventListener("click", () => moverDiapositiva(1));
+document.getElementById("boton-mover-izquierda")?.addEventListener("click", () => moverDiapositiva(-1));
+document.getElementById("boton-mover-derecha")?.addEventListener("click", () => moverDiapositiva(1));
 
 // ---- Zoom de la vista del editor ----
 // Sólo cambia cómo se ve el lienzo; las posiciones reales y la exportación
@@ -1436,7 +1438,7 @@ const barraProgreso = document.getElementById("barra-progreso-presentacion");
 const canvasPresentacion = document.getElementById("lienzo-presentacion");
 const lienzoPresentacion = new fabric.StaticCanvas("lienzo-presentacion");
 let indicePresentacion = 0;
-let presentando = false;
+
 
 function ajustarTamanoPresentacion() {
   const escala = Math.min(window.innerWidth / ANCHO, window.innerHeight / ALTO) * 0.96;
