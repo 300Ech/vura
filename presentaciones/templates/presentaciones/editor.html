@@ -500,11 +500,12 @@
     border-top: 1px solid var(--border-light);
     display: flex;
     flex-direction: row;
-    gap: 8px;
-    padding: 8px 16px;
+    gap: 6px;
+    padding: 6px 12px;
     overflow-x: auto;
     overflow-y: hidden;
     flex-shrink: 0;
+    max-height: 90px;
   }
   #panel-diapositivas .miniatura {
     width: 96px; /* Más pequeño para no robar espacio */
@@ -668,7 +669,7 @@
     <!-- Área de Lienzo (Scroll Independiente) -->
     <div class="lienzo-scroll-area">
       <!-- Contenedor central infinito -->
-      <div class="flex-grow-1" style="min-width: fit-content; min-height: fit-content; background: var(--bg-color); padding: 40px; display: flex; align-items: flex-start;">
+      <div class="flex-grow-1" style="min-width: fit-content; min-height: fit-content; background: var(--bg-color); padding: 20px; display: flex; align-items: center; justify-content: center;">
         <div id="contenedor-lienzo-escalado" style="margin: 0 auto;">
           <div class="marco-lienzo">
             <canvas id="lienzo" width="960" height="540"></canvas>
