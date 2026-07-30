@@ -30,13 +30,7 @@ function ajustarLienzo() {
 ajustarLienzo();
 window.addEventListener("resize", ajustarLienzo);
 
-function getCentroVista() {
-  const vpt = lienzo.viewportTransform;
-  return {
-    x: (zonaPizarra.clientWidth / 2 - vpt[4]) / vpt[0],
-    y: (zonaPizarra.clientHeight / 2 - vpt[5]) / vpt[3]
-  };
-}
+
 
 
 // El color elegido en la paleta se usa para post-its nuevos y para el lápiz.
@@ -282,8 +276,8 @@ function desactivarLapiz() {
 function agregarPostIt() {
   desactivarLapiz();
   const postIt = crearPostIt("Escribe aquí", {
-    left: getCentroVista().x - 90 + Math.random() * 40,
-    top: getCentroVista().y - 90 + Math.random() * 40,
+    left: 80 + Math.random() * 200,
+    top: 80 + Math.random() * 150,
   });
   lienzo.add(postIt);
   lienzo.setActiveObject(postIt);
@@ -295,8 +289,8 @@ document.getElementById("boton-postit").addEventListener("click", agregarPostIt)
 document.getElementById("boton-texto-suelto").addEventListener("click", () => {
   desactivarLapiz();
   const texto = new fabric.IText("Texto", {
-    left: getCentroVista().x - 60 + Math.random() * 40,
-    top: getCentroVista().y - 60 + Math.random() * 40,
+    left: 120 + Math.random() * 200,
+    top: 120 + Math.random() * 150,
     fontSize: 32,
     fontFamily: "Caveat",
     fill: "#1e293b",
@@ -781,12 +775,8 @@ window.socketChat.on("cursor_movido", (datos) => {
     cursores.set(datos.id_usuario, cursor);
   }
   
-  cursor.datosOriginales = datos;
-  const vpt = lienzo.viewportTransform;
-  const screenX = datos.x * vpt[0] + vpt[4];
-  const screenY = datos.y * vpt[3] + vpt[5];
   // Transform es mucho más eficiente que top/left porque usa la GPU
-  cursor.style.transform = `translate(${screenX}px, ${screenY}px)`;
+  cursor.style.transform = `translate(${datos.x}px, ${datos.y}px)`;
   
   // Si no se mueve en 3 segundos, lo borramos (probablemente salió de la pestaña)
   clearTimeout(cursor.temporizadorLimpieza);
@@ -794,71 +784,4 @@ window.socketChat.on("cursor_movido", (datos) => {
     cursor.remove();
     cursores.delete(datos.id_usuario);
   }, 3000);
-});
-
-
-// ---- Navegación infinita (Zoom y Paneo) ----
-
-
-function actualizarUICursosYZoom() {
-  // Reposicionar cursores remotos según el zoom/pan actual
-  for (const [id, cursor] of cursores.entries()) {
-    if (cursor.datosOriginales) {
-      const vpt = lienzo.viewportTransform;
-      const screenX = cursor.datosOriginales.x * vpt[0] + vpt[4];
-      const screenY = cursor.datosOriginales.y * vpt[3] + vpt[5];
-      cursor.style.transform = `translate(${screenX}px, ${screenY}px)`;
-    }
-  }
-}
-
-// Eventos de rueda (Mouse Wheel / Trackpad)
-lienzo.on('mouse:wheel', function(opt) {
-  const delta = opt.e.deltaY;
-  // Zoom in/out directamente con la rueda
-  let zoom = lienzo.getZoom();
-  zoom *= 0.999 ** delta;
-  if (zoom > 5) zoom = 5;
-  if (zoom < 0.1) zoom = 0.1;
-  lienzo.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
-  opt.e.preventDefault();
-  opt.e.stopPropagation();
-  actualizarUICursosYZoom();
-});
-
-// Arrastrar (Drag / Pan) el lienzo
-let arrastrandoLienzo = false;
-let ultimaX, ultimaY;
-
-lienzo.on('mouse:down', function(opt) {
-  const evt = opt.e;
-  // Permitir pan si pulsan Alt, o el botón central (1), o click derecho (2)
-  // O si hacen click izquierdo (0) en una zona vacía (!opt.target)
-  if (evt.altKey === true || evt.button === 1 || evt.button === 2 || (evt.button === 0 && !opt.target && !lienzo.isDrawingMode)) {
-    arrastrandoLienzo = true;
-    lienzo.selection = false;
-    ultimaX = evt.clientX;
-    ultimaY = evt.clientY;
-    opt.e.preventDefault();
-  }
-});
-
-lienzo.on('mouse:move', function(opt) {
-  if (arrastrandoLienzo) {
-    const e = opt.e;
-    const vpt = this.viewportTransform;
-    vpt[4] += e.clientX - ultimaX;
-    vpt[5] += e.clientY - ultimaY;
-    this.requestRenderAll();
-    ultimaX = e.clientX;
-    ultimaY = e.clientY;
-    actualizarUICursosYZoom();
-  }
-});
-
-lienzo.on('mouse:up', function(opt) {
-  arrastrandoLienzo = false;
-  if (!lienzo.isDrawingMode) {
-    lienzo.selection = true;
-  }
 });
