@@ -138,14 +138,10 @@
     cursor: default;
   }
   .menu-contextual .separador:hover { background: #e2e8f0; }
-  #panel-diapositivas {
-    width: 180px;
-    max-height: 72vh;
-    overflow-y: auto;
-  }
+
   .miniatura {
     display: block;
-    width: 100%;
+    width: 140px;
     border: var(--border-thickness) solid var(--border-dark);
     border-radius: var(--radius-btn);
     padding: 0;
@@ -484,6 +480,8 @@
     overflow: auto; /* IMPORTANTE: Solo esta área hace scroll */
     display: flex;
     flex-direction: row;
+    min-height: 0;
+    min-width: 0;
   }
   
   .barra-inferior-fija {
@@ -502,12 +500,14 @@
     border-top: 1px solid var(--border-light);
     display: flex;
     flex-direction: row;
-    gap: 12px;
-    padding: 12px 20px;
+    gap: 8px;
+    padding: 8px 16px;
     overflow-x: auto;
     overflow-y: hidden;
-    min-height: 120px;
     flex-shrink: 0;
+  }
+  #panel-diapositivas .miniatura {
+    width: 96px; /* Más pequeño para no robar espacio */
   }
 </style>
 
