@@ -47,7 +47,7 @@ function ajustarEscalaEditor() {
   contenedorLienzoEscalado.style.height = `${ALTO * escala}px`;
   if (porcentajeZoom) porcentajeZoom.textContent = `${Math.round(escala * 100)}%`;
 }
-ajustarEscalaEditor();
+requestAnimationFrame(() => ajustarEscalaEditor());
 
 // diapositivas = [{ id, contenido, notas }] en el orden actual.
 let diapositivas = diapositivasIniciales.map((d) => ({
@@ -832,17 +832,31 @@ document.getElementById("boton-iconos").addEventListener("click", () => {
 });
 
 // ---- Barra por categorías ----
-// Cada pestaña muestra su panel de opciones y esconde los demás.
+// Cada pestaña muestra su panel de opciones; al clickear de nuevo lo cierra.
+const panelesHerramientas = document.querySelector(".paneles-herramientas");
+let tabActiva = null;
 
 document.querySelectorAll(".cat-tab").forEach((tab) => {
   tab.addEventListener("click", () => {
+    const yaActiva = tab.dataset.cat === tabActiva;
     document.querySelectorAll(".cat-tab").forEach((t) => t.classList.remove("activa"));
-    tab.classList.add("activa");
-    document.querySelectorAll(".panel-categoria").forEach((panel) => {
-      panel.classList.toggle("d-none", panel.dataset.panel !== tab.dataset.cat);
-    });
+    document.querySelectorAll(".panel-categoria").forEach((p) => p.classList.add("d-none"));
+    if (yaActiva) {
+      panelesHerramientas.classList.add("d-none");
+      tabActiva = null;
+    } else {
+      tab.classList.add("activa");
+      panelesHerramientas.classList.remove("d-none");
+      const panel = document.querySelector(`.panel-categoria[data-panel="${tab.dataset.cat}"]`);
+      if (panel) panel.classList.remove("d-none");
+      tabActiva = tab.dataset.cat;
+    }
+    setTimeout(ajustarEscalaEditor, 50);
   });
 });
+
+panelesHerramientas.classList.add("d-none");
+tabActiva = null;
 
 // ---- Insertar texto ----
 // Cada objeto nuevo se coloca en el centro con un pequeño desplazamiento

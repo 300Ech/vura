@@ -456,6 +456,11 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    border-left: 1px solid var(--border-light);
+    transition: width 0.2s ease;
+  }
+  .paneles-herramientas.d-none {
+    display: none !important;
   }
   
   .lienzo-wrapper {
@@ -522,7 +527,7 @@
   <div class="editor-sidebar-container">
     <!-- Pestañas verticales -->
     <div class="categorias-barra">
-      <button class="cat-tab activa" type="button" data-cat="plantillas"><span class="icono-tab">🎨</span>Plantillas</button>
+      <button class="cat-tab" type="button" data-cat="plantillas"><span class="icono-tab">🎨</span>Plantillas</button>
       <button class="cat-tab" type="button" data-cat="texto"><span class="icono-tab">✏️</span>Texto</button>
       <button class="cat-tab" type="button" data-cat="formas"><span class="icono-tab">⬛</span>Formas</button>
       <button class="cat-tab" type="button" data-cat="iconos"><span class="icono-tab">⭐</span>Iconos</button>
