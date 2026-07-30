@@ -856,5 +856,7 @@ lienzo.on('mouse:move', function(opt) {
 
 lienzo.on('mouse:up', function(opt) {
   arrastrandoLienzo = false;
-  lienzo.selection = true;
+  if (!lienzo.isDrawingMode) {
+    lienzo.selection = true;
+  }
 });
