@@ -50,6 +50,14 @@ def usuario_desde_token(token):
     return usuario
 
 
+def enlace_absoluto(ruta):
+    """Arma la dirección completa del enlace que se envía por correo."""
+    base = current_app.config.get("URL_PUBLICA")
+    if not base:
+        base = request.url_root.rstrip("/")
+    return base.rstrip("/") + ruta
+
+
 def _texto_correo(usuario, enlace):
     return (
         f"Hola, {usuario.nombre}.\n\n"
@@ -199,8 +207,7 @@ def olvide_contrasena():
         if usuario:
             token = crear_token_recuperacion(usuario)
             ruta = url_for("autenticacion.restablecer_contrasena", token=token)
-            base = (current_app.config.get("URL_PUBLICA") or request.url_root).rstrip("/")
-            enlace = base + ruta
+            enlace = enlace_absoluto(ruta)
             try:
                 enviar_correo_recuperacion(usuario, enlace)
             except Exception:

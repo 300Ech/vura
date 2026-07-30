@@ -7,11 +7,32 @@ RUTA_BASE = os.path.dirname(os.path.abspath(__file__))
 RUTA_DATOS = os.environ.get("VURA_RUTA_DATOS", RUTA_BASE)
 
 
+def url_publica():
+    """Dirección con la que la gente entra a Vura (la que va en los correos).
+
+    Los dominios ".railway.internal" sólo funcionan entre servicios de Railway,
+    así que se descartan: si alguien los configura por error, se usa el dominio
+    público que Railway publica en RAILWAY_PUBLIC_DOMAIN.
+    """
+    candidatos = [
+        os.environ.get("VURA_URL_PUBLICA"),
+        os.environ.get("RAILWAY_PUBLIC_DOMAIN"),
+    ]
+    for candidato in candidatos:
+        direccion = (candidato or "").strip().rstrip("/")
+        if not direccion or ".railway.internal" in direccion:
+            continue
+        if not direccion.startswith(("http://", "https://")):
+            direccion = "https://" + direccion
+        return direccion
+    return None
+
+
 class Config:
     SECRET_KEY = os.environ.get("VURA_SECRET_KEY", "clave-de-desarrollo-cambiar-en-produccion")
     SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(RUTA_DATOS, "vura.db")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    URL_PUBLICA = os.environ.get("VURA_URL_PUBLICA")
+    URL_PUBLICA = url_publica()
     # Brevo por API HTTP (funciona en Railway, donde el SMTP saliente está bloqueado).
     BREVO_API_KEY = os.environ.get("VURA_BREVO_API_KEY")
     BREVO_REMITENTE = os.environ.get("VURA_BREVO_REMITENTE")  # correo verificado en Brevo
