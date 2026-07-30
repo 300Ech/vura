@@ -826,13 +826,15 @@ lienzo.on('mouse:wheel', function(opt) {
   actualizarUICursosYZoom();
 });
 
-// Arrastrar (Middle click o Alt + Left click)
+// Arrastrar (Drag / Pan) el lienzo
 let arrastrandoLienzo = false;
 let ultimaX, ultimaY;
 
 lienzo.on('mouse:down', function(opt) {
   const evt = opt.e;
-  if (evt.altKey === true || evt.button === 1 || evt.button === 2) { // Alt, botón central, o derecho
+  // Permitir pan si pulsan Alt, o el botón central (1), o click derecho (2)
+  // O si hacen click izquierdo (0) en una zona vacía (!opt.target)
+  if (evt.altKey === true || evt.button === 1 || evt.button === 2 || (evt.button === 0 && !opt.target && !lienzo.isDrawingMode)) {
     arrastrandoLienzo = true;
     lienzo.selection = false;
     ultimaX = evt.clientX;
