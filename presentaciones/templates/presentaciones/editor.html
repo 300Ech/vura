@@ -498,11 +498,16 @@
   }
   
   #panel-diapositivas {
-    width: 160px;
     background: #f8fafc;
-    border-right: 1px solid var(--border-light);
-    overflow-y: auto;
-    padding: 12px;
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    padding: 12px 20px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    min-height: 120px;
+    flex-shrink: 0;
   }
 </style>
 
@@ -662,28 +667,26 @@
 
     <!-- Área de Lienzo (Scroll Independiente) -->
     <div class="lienzo-scroll-area">
-      <!-- Miniaturas en la izquierda del canvas -->
-      <div id="panel-diapositivas">
-        <!-- Javascript renders miniaturas here -->
-      </div>
-      
       <!-- Contenedor central infinito -->
-      <div class="flex-grow-1 d-flex flex-column" style="min-width: fit-content; min-height: fit-content; background: var(--bg-color);">
-        <div class="d-flex justify-content-center p-5">
-          <div id="contenedor-lienzo-escalado">
-            <div class="marco-lienzo">
-              <canvas id="lienzo" width="960" height="540"></canvas>
-              <div id="estado-vacio" class="estado-vacio d-none">
-                <div class="estado-vacio-caja">
-                  <div class="estado-vacio-emoji">🪄</div>
-                  <p class="estado-vacio-titulo">Diapositiva en blanco</p>
-                  <p class="estado-vacio-texto">Agregá texto, formas o elegí una plantilla.</p>
-                </div>
+      <div class="flex-grow-1" style="min-width: fit-content; min-height: fit-content; background: var(--bg-color); padding: 40px; display: flex; align-items: flex-start;">
+        <div id="contenedor-lienzo-escalado" style="margin: 0 auto;">
+          <div class="marco-lienzo">
+            <canvas id="lienzo" width="960" height="540"></canvas>
+            <div id="estado-vacio" class="estado-vacio d-none">
+              <div class="estado-vacio-caja">
+                <div class="estado-vacio-emoji">🪄</div>
+                <p class="estado-vacio-titulo">Diapositiva en blanco</p>
+                <p class="estado-vacio-texto">Agregá texto, formas o elegí una plantilla.</p>
               </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Tira de Miniaturas (Abajo) -->
+    <div id="panel-diapositivas">
+      <!-- Javascript renders miniaturas here -->
     </div>
 
     <!-- Barra Inferior Fija (Zoom y Controles) -->

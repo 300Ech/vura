@@ -30,6 +30,15 @@ function ajustarLienzo() {
 ajustarLienzo();
 window.addEventListener("resize", ajustarLienzo);
 
+function getCentroVista() {
+  const vpt = lienzo.viewportTransform;
+  return {
+    x: (zonaPizarra.clientWidth / 2 - vpt[4]) / vpt[0],
+    y: (zonaPizarra.clientHeight / 2 - vpt[5]) / vpt[3]
+  };
+}
+
+
 // El color elegido en la paleta se usa para post-its nuevos y para el lápiz.
 let colorActual = "#fde047"; // amarillo post-it vibrante
 
@@ -273,8 +282,8 @@ function desactivarLapiz() {
 function agregarPostIt() {
   desactivarLapiz();
   const postIt = crearPostIt("Escribe aquí", {
-    left: 80 + Math.random() * 200,
-    top: 80 + Math.random() * 150,
+    left: getCentroVista().x - 90 + Math.random() * 40,
+    top: getCentroVista().y - 90 + Math.random() * 40,
   });
   lienzo.add(postIt);
   lienzo.setActiveObject(postIt);
@@ -286,8 +295,8 @@ document.getElementById("boton-postit").addEventListener("click", agregarPostIt)
 document.getElementById("boton-texto-suelto").addEventListener("click", () => {
   desactivarLapiz();
   const texto = new fabric.IText("Texto", {
-    left: 120 + Math.random() * 200,
-    top: 120 + Math.random() * 150,
+    left: getCentroVista().x - 60 + Math.random() * 40,
+    top: getCentroVista().y - 60 + Math.random() * 40,
     fontSize: 32,
     fontFamily: "Caveat",
     fill: "#1e293b",
@@ -772,8 +781,12 @@ window.socketChat.on("cursor_movido", (datos) => {
     cursores.set(datos.id_usuario, cursor);
   }
   
+  cursor.datosOriginales = datos;
+  const vpt = lienzo.viewportTransform;
+  const screenX = datos.x * vpt[0] + vpt[4];
+  const screenY = datos.y * vpt[3] + vpt[5];
   // Transform es mucho más eficiente que top/left porque usa la GPU
-  cursor.style.transform = `translate(${datos.x}px, ${datos.y}px)`;
+  cursor.style.transform = `translate(${screenX}px, ${screenY}px)`;
   
   // Si no se mueve en 3 segundos, lo borramos (probablemente salió de la pestaña)
   clearTimeout(cursor.temporizadorLimpieza);
@@ -781,4 +794,95 @@ window.socketChat.on("cursor_movido", (datos) => {
     cursor.remove();
     cursores.delete(datos.id_usuario);
   }, 3000);
+});
+
+
+// ---- Navegación infinita (Zoom y Paneo) ----
+const btnZoomIn = document.getElementById("btn-zoom-in");
+const btnZoomOut = document.getElementById("btn-zoom-out");
+const labelZoom = document.getElementById("porcentaje-zoom");
+
+function setZoomPizarra(nuevoZoom) {
+  if (nuevoZoom > 5) nuevoZoom = 5;
+  if (nuevoZoom < 0.1) nuevoZoom = 0.1;
+  const center = { x: zonaPizarra.clientWidth / 2, y: zonaPizarra.clientHeight / 2 };
+  lienzo.zoomToPoint(center, nuevoZoom);
+  actualizarUICursosYZoom();
+}
+
+if (btnZoomIn) btnZoomIn.addEventListener("click", () => setZoomPizarra(lienzo.getZoom() * 1.2));
+if (btnZoomOut) btnZoomOut.addEventListener("click", () => setZoomPizarra(lienzo.getZoom() / 1.2));
+if (labelZoom) {
+  labelZoom.addEventListener("click", () => {
+    lienzo.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    actualizarUICursosYZoom();
+  });
+}
+
+function actualizarUICursosYZoom() {
+  if (labelZoom) labelZoom.textContent = Math.round(lienzo.getZoom() * 100) + "%";
+  // Reposicionar cursores remotos según el zoom/pan actual
+  for (const [id, cursor] of cursores.entries()) {
+    if (cursor.datosOriginales) {
+      const vpt = lienzo.viewportTransform;
+      const screenX = cursor.datosOriginales.x * vpt[0] + vpt[4];
+      const screenY = cursor.datosOriginales.y * vpt[3] + vpt[5];
+      cursor.style.transform = `translate(${screenX}px, ${screenY}px)`;
+    }
+  }
+}
+
+// Eventos de rueda (Mouse Wheel / Trackpad)
+lienzo.on('mouse:wheel', function(opt) {
+  const delta = opt.e.deltaY;
+  if (opt.e.ctrlKey) {
+    // Zoom in/out
+    let zoom = lienzo.getZoom();
+    zoom *= 0.999 ** delta;
+    if (zoom > 5) zoom = 5;
+    if (zoom < 0.1) zoom = 0.1;
+    lienzo.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
+    opt.e.preventDefault();
+    opt.e.stopPropagation();
+  } else {
+    // Pan
+    const vpt = this.viewportTransform;
+    vpt[4] -= opt.e.deltaX;
+    vpt[5] -= opt.e.deltaY;
+    this.requestRenderAll();
+  }
+  actualizarUICursosYZoom();
+});
+
+// Arrastrar (Middle click o Alt + Left click)
+let arrastrandoLienzo = false;
+let ultimaX, ultimaY;
+
+lienzo.on('mouse:down', function(opt) {
+  const evt = opt.e;
+  if (evt.altKey === true || evt.button === 1 || evt.button === 2) { // Alt, botón central, o derecho
+    arrastrandoLienzo = true;
+    lienzo.selection = false;
+    ultimaX = evt.clientX;
+    ultimaY = evt.clientY;
+    opt.e.preventDefault();
+  }
+});
+
+lienzo.on('mouse:move', function(opt) {
+  if (arrastrandoLienzo) {
+    const e = opt.e;
+    const vpt = this.viewportTransform;
+    vpt[4] += e.clientX - ultimaX;
+    vpt[5] += e.clientY - ultimaY;
+    this.requestRenderAll();
+    ultimaX = e.clientX;
+    ultimaY = e.clientY;
+    actualizarUICursosYZoom();
+  }
+});
+
+lienzo.on('mouse:up', function(opt) {
+  arrastrandoLienzo = false;
+  lienzo.selection = true;
 });

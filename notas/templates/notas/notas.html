@@ -60,7 +60,7 @@
 
   #zona-pizarra {
     position: relative;
-    overflow: auto;
+    overflow: hidden; /* Oculta scrollbars nativas, Fabric hará el paneo */
     height: 100vh;
     max-height: 100vh;
     border-radius: 0;
@@ -224,8 +224,51 @@
     display: none;
     z-index: 10;
   }
-  .badge-notificacion.visible { display: block; }
 
+  /* Control de Zoom flotante */
+  #controles-zoom {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow-solid, 4px 4px 0 rgba(0,0,0,0.15));
+    border: var(--border-thickness, 2px) solid var(--border-dark, #1e293b);
+    padding: 4px;
+    gap: 4px;
+  }
+  #controles-zoom button {
+    border: none;
+    background: transparent;
+    font-size: 1.2rem;
+    font-weight: bold;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    color: #1e293b;
+  }
+  #controles-zoom button:hover {
+    background: #f1f5f9;
+  }
+  #porcentaje-zoom {
+    font-size: 0.85rem;
+    font-weight: 800;
+    min-width: 48px;
+    text-align: center;
+    user-select: none;
+    color: #1e293b;
+    cursor: pointer;
+  }
+  #porcentaje-zoom:hover {
+    color: #3b82f6;
+  }
 
   /* ---- Móvil: pizarra usable + versión light ---- */
   @media (max-width: 768px) {
@@ -350,13 +393,9 @@
             <span class="icono">🎙️</span>
             <span class="etiqueta">Voz-it</span>
           </button>
-          <button id="boton-foto" class="herramienta" type="button" title="Pegar una foto tipo Polaroid">
-            <span class="icono">📷</span>
-            <span class="etiqueta">Foto</span>
-          </button>
-          <button id="boton-video" class="herramienta" type="button" title="Pegar un video corto">
-            <span class="icono">🎬</span>
-            <span class="etiqueta">Video</span>
+          <button type="button" class="herramienta" id="btn-foto" title="Subir imagen o video corto">
+            <span class="icono">🖼️</span>
+            <span class="etiqueta">Medios</span>
           </button>
 
           <div class="separador-menu"></div>
@@ -399,6 +438,13 @@
     </div>
     <video id="video-reproductor" controls></video>
   </div>
+</div>
+
+<!-- Controles flotantes de Zoom -->
+<div id="controles-zoom">
+  <button id="btn-zoom-out" title="Alejar (Ctrl + Rueda)">−</button>
+  <span id="porcentaje-zoom" title="Ajustar al 100%">100%</span>
+  <button id="btn-zoom-in" title="Acercar (Ctrl + Rueda)">+</button>
 </div>
 
 <script id="contenido-inicial" type="application/json">{{ contenido | safe }}</script>
