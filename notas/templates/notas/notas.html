@@ -5,6 +5,7 @@
 <style>
   .main-content {
     padding: 0 !important;
+    overflow: hidden !important;
   }
   
   #notas {
@@ -223,6 +224,8 @@
     display: none;
     z-index: 10;
   }
+  .badge-notificacion.visible { display: block; }
+
 
   /* ---- Móvil: pizarra usable + versión light ---- */
   @media (max-width: 768px) {
@@ -347,9 +350,13 @@
             <span class="icono">🎙️</span>
             <span class="etiqueta">Voz-it</span>
           </button>
-          <button type="button" class="herramienta" id="boton-foto" title="Subir imagen o video corto">
-            <span class="icono">🖼️</span>
-            <span class="etiqueta">Medios</span>
+          <button id="boton-foto" class="herramienta" type="button" title="Pegar una foto tipo Polaroid">
+            <span class="icono">📷</span>
+            <span class="etiqueta">Foto</span>
+          </button>
+          <button id="boton-video" class="herramienta" type="button" title="Pegar un video corto">
+            <span class="icono">🎬</span>
+            <span class="etiqueta">Video</span>
           </button>
 
           <div class="separador-menu"></div>
