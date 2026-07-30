@@ -18,3 +18,17 @@ class FormularioInicioSesion(FlaskForm):
     correo = StringField("Correo electrónico", validators=[DataRequired(), Email()])
     contrasena = PasswordField("Contraseña", validators=[DataRequired()])
     enviar = SubmitField("Entrar")
+
+
+class FormularioRecuperacion(FlaskForm):
+    correo = StringField("Correo electrónico", validators=[DataRequired(), Email()])
+    enviar = SubmitField("Enviar enlace")
+
+
+class FormularioRestablecer(FlaskForm):
+    contrasena = PasswordField("Nueva contraseña", validators=[DataRequired(), Length(min=6)])
+    confirmar_contrasena = PasswordField(
+        "Confirmar nueva contraseña",
+        validators=[DataRequired(), EqualTo("contrasena", message="Las contraseñas no coinciden")],
+    )
+    enviar = SubmitField("Cambiar contraseña")

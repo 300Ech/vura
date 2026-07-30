@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block titulo %}Recuperar contraseña{% endblock %}
+
+{% block contenido %}
+<div class="row justify-content-center">
+  <div class="col-lg-4 col-md-6 col-sm-8">
+    <div class="card bg-sticky-yellow">
+      <div class="card-body p-5">
+        <div class="text-center fs-1 mb-2">🔐</div>
+        <h1 class="h4 mb-2 text-center fw-bold">¿Olvidaste tu contraseña?</h1>
+        <p class="text-muted text-center small mb-4">
+          Escribe el correo de tu cuenta y te enviaremos un enlace para crear una nueva.
+        </p>
+
+        <form method="post" novalidate>
+          {{ formulario.hidden_tag() }}
+          <div class="mb-4">
+            {{ formulario.correo.label(class="form-label fw-semibold") }}
+            {{ formulario.correo(class="form-control form-control-lg", autocomplete="email") }}
+            {% for error in formulario.correo.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+          {{ formulario.enviar(class="btn btn-primary btn-lg w-100") }}
+        </form>
+
+        <p class="text-center small mt-3 mb-0">
+          <a href="{{ url_for('autenticacion.iniciar_sesion') }}">← Volver a iniciar sesión</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
