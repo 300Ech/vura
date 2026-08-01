@@ -4,6 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titulo %}Vura{% endblock %} · Vura</title>
+  <meta name="theme-color" content="#8b5cf6">
+  <meta name="description" content="Trabajo en equipo para el colegio: pizarra, tareas, diapos y chat.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Vura">
+  <link rel="manifest" href="{{ url_for('manifesto') }}">
+  <link rel="icon" href="{{ url_for('static', filename='iconos/icono-192.png') }}" type="image/png">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='iconos/apple-touch-icon.png') }}">
   <!-- Google Fonts: Nunito -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,6 +21,10 @@
   <link href="{{ url_for('static', filename='css/estilos.css') }}" rel="stylesheet">
 </head>
 <body class="bg-light" {% if current_user.is_authenticated %}data-id-usuario="{{ current_user.id }}"{% endif %}>
+
+  <div id="banner-sin-conexion" class="banner-sin-conexion" hidden>
+    Sin conexión — pizarra, tareas, diapos y mensajes de texto se guardan aquí y se sincronizan al volver
+  </div>
 
   <div class="layout-wrapper">
     <!-- Sidebar Global -->
@@ -72,6 +84,11 @@
       </nav>
 
       <div class="sidebar-bottom">
+        <button id="boton-instalar-pwa" class="sidebar-link btn-link" type="button" title="Instalar Vura" hidden
+                style="border:none; background:none; padding:0;">
+          <span class="icono">📲</span>
+          <span class="etiqueta">Instalar</span>
+        </button>
         {% if current_user.is_authenticated %}
           <span id="estado-conexion" class="badge bg-success-subtle text-success-emphasis mb-2 d-block mx-auto" style="font-size: 0.6rem; padding: 4px; width: fit-content;"></span>
           <a class="sidebar-link" href="{{ url_for('autenticacion.cerrar_sesion') }}" title="Cerrar sesión" onclick="return confirm('¿Estás seguro de que deseas salir?');">

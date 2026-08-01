@@ -1,12 +1,28 @@
 // Service Worker de Vura: permite abrir la aplicación sin conexión.
 // Librerías de CDN (versionadas, nunca cambian): caché primero.
 // Todo lo propio (páginas y archivos de la app): red primero, caché de respaldo.
-const NOMBRE_CACHE = "vura-v5";
+const NOMBRE_CACHE = "vura-v8";
+
+// Shell útil: estilos, JS, PWA, cola offline y Bootstrap (CDN). No incluye socket.io.
+const PRECACHE = [
+  "/manifest.webmanifest",
+  "/static/css/estilos.css",
+  "/static/js/aplicacion.js",
+  "/static/js/notificaciones.js",
+  "/static/js/chat_global.js",
+  "/static/iconos/icono-192.png",
+  "/static/iconos/icono-512.png",
+  "/static/iconos/apple-touch-icon.png",
+  "/colaboracion/static/almacen_local.js",
+  "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css",
+  "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js",
+  "https://cdn.jsdelivr.net/npm/dexie@4.0.8/+esm",
+];
 
 self.addEventListener("install", (evento) => {
   evento.waitUntil(
     caches.open(NOMBRE_CACHE)
-      .then((cache) => cache.addAll(["/static/css/estilos.css", "/static/js/aplicacion.js"]))
+      .then((cache) => cache.addAll(PRECACHE))
       .then(() => self.skipWaiting())
   );
 });

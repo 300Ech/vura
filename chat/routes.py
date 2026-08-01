@@ -339,12 +339,14 @@ def enviar_mensaje(datos):
     id_equipo = datos.get("id_equipo")
     texto = (datos.get("texto") or "").strip()
     if not texto or len(texto) > 1000 or not es_miembro_del_equipo(id_equipo):
-        return
+        return {"ok": False}
 
     mensaje = Mensaje(id_equipo=id_equipo, id_usuario=current_user.id, texto=texto)
     db.session.add(mensaje)
     db.session.commit()
     emitir_mensaje(mensaje)
+    # El cliente usa este "ok" para borrar el mensaje de la cola offline.
+    return {"ok": True, "id": mensaje.id}
 
 
 @socketio.on("reaccionar_mensaje")

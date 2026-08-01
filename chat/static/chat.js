@@ -12,11 +12,106 @@ const avisoEscribiendo = document.getElementById("aviso-escribiendo");
 const botonVoz = document.getElementById("boton-voz-chat");
 const socket = io();
 
+// Dexie vive en almacen_local.js (módulo); lo cargamos cuando hace falta.
+let almacenChat = null;
+async function obtenerAlmacen() {
+  if (!almacenChat) {
+    almacenChat = await import("/colaboracion/static/almacen_local.js");
+  }
+  return almacenChat;
+}
+
+function horaAhora() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
+
+function quitarMensajePendienteUi(idLocal) {
+  const clave = "pendiente-" + idLocal;
+  mensajes.delete(clave);
+  document.getElementById("mensaje-" + clave)?.remove();
+}
+
+async function encolarMensaje(texto) {
+  const almacen = await obtenerAlmacen();
+  const idLocal = await almacen.guardarMensajePendiente({
+    id_equipo: idEquipo,
+    texto: texto,
+  });
+  agregarMensaje({
+    id: "pendiente-" + idLocal,
+    id_usuario: idUsuarioActual,
+    nombre: "Tú",
+    texto: texto,
+    hora: horaAhora(),
+    pendiente: true,
+    reacciones: { totales: {}, mias: [] },
+  });
+}
+
+// Evita que "connect" y "online" manden la misma cola a la vez.
+let enviandoCola = false;
+
+function emitirMensajeConAck(texto) {
+  return new Promise((resolver) => {
+    let listo = false;
+    const terminar = (ok) => {
+      if (listo) return;
+      listo = true;
+      resolver(ok);
+    };
+    // Si el servidor no responde en 8s, se reintenta después (el mensaje sigue en IndexedDB).
+    const temporizador = setTimeout(() => terminar(false), 8000);
+    socket.emit("enviar_mensaje", { id_equipo: idEquipo, texto: texto }, (respuesta) => {
+      clearTimeout(temporizador);
+      terminar(Boolean(respuesta && respuesta.ok));
+    });
+  });
+}
+
+async function enviarColaPendientes() {
+  if (enviandoCola || !navigator.onLine || !socket.connected) return;
+  enviandoCola = true;
+  try {
+    const almacen = await obtenerAlmacen();
+    const pendientes = await almacen.listarMensajesPendientes(idEquipo);
+    for (const pendiente of pendientes) {
+      const ok = await emitirMensajeConAck(pendiente.texto);
+      if (!ok) break; // se reintenta al próximo connect/online
+      await almacen.borrarMensajePendiente(pendiente.id);
+      quitarMensajePendienteUi(pendiente.id);
+    }
+  } finally {
+    enviandoCola = false;
+  }
+}
+
+async function mostrarPendientesGuardados() {
+  const almacen = await obtenerAlmacen();
+  const pendientes = await almacen.listarMensajesPendientes(idEquipo);
+  for (const pendiente of pendientes) {
+    if (mensajes.has("pendiente-" + pendiente.id)) continue;
+    agregarMensaje({
+      id: "pendiente-" + pendiente.id,
+      id_usuario: idUsuarioActual,
+      nombre: "Tú",
+      texto: pendiente.texto,
+      hora: horaAhora(),
+      pendiente: true,
+      reacciones: { totales: {}, mias: [] },
+    });
+  }
+}
+
 socket.on("connect", () => {
   socket.emit("unirse_sala", { id_equipo: idEquipo });
+  enviarColaPendientes();
 });
 
+window.addEventListener("online", () => enviarColaPendientes());
+
 JSON.parse(document.getElementById("datos-mensajes").textContent).forEach(agregarMensaje);
+mostrarPendientesGuardados();
 
 socket.on("nuevo_mensaje", (mensaje) => {
   avisoEscribiendo.textContent = "";
@@ -72,14 +167,26 @@ socket.on("usuario_escribiendo", (datos) => {
   }, 3000);
 });
 
-formularioMensaje.addEventListener("submit", (evento) => {
+formularioMensaje.addEventListener("submit", async (evento) => {
   evento.preventDefault();
   const texto = campoTexto.value.trim();
   if (!texto) return;
-  socket.emit("enviar_mensaje", { id_equipo: idEquipo, texto: texto });
+  // Sin conexión (o socket caído): se guarda y se envía al volver.
+  if (!navigator.onLine || !socket.connected) {
+    try {
+      await encolarMensaje(texto);
+    } catch (error) {
+      return; // si IndexedDB falla, el texto se queda en el campo
+    }
+    campoTexto.value = "";
+    ajustarAltoCampo();
+    campoTexto.focus();
+    return;
+  }
   campoTexto.value = "";
   ajustarAltoCampo();
   campoTexto.focus();
+  socket.emit("enviar_mensaje", { id_equipo: idEquipo, texto: texto });
 });
 
 // ---- Selector pequeño de emojis ----
@@ -209,7 +316,7 @@ function agregarMensaje(mensaje) {
   grupo.appendChild(nombre);
 
   const burbuja = document.createElement("div");
-  burbuja.className = "burbuja-chat";
+  burbuja.className = "burbuja-chat" + (mensaje.pendiente ? " pendiente" : "");
   grupo.appendChild(burbuja);
 
   if (mensaje.texto) {
@@ -240,51 +347,60 @@ function agregarMensaje(mensaje) {
   hora.textContent = mensaje.hora;
   burbuja.appendChild(hora);
 
+  if (mensaje.pendiente) {
+    const etiqueta = document.createElement("div");
+    etiqueta.className = "etiqueta-pendiente";
+    etiqueta.textContent = "⏳ pendiente";
+    burbuja.appendChild(etiqueta);
+  }
+
   const reacciones = document.createElement("div");
   reacciones.className = "reacciones-chat";
   reacciones.id = "reacciones-" + mensaje.id;
   burbuja.appendChild(reacciones);
 
-  // Un solo botón "reaccionar"; el menú de emojis se abre al hacer clic.
-  const filaAcciones = document.createElement("div");
-  filaAcciones.className = "acciones-reaccion";
+  // Mensajes pendientes: sin reacciones hasta que se envíen.
+  if (!mensaje.pendiente) {
+    const filaAcciones = document.createElement("div");
+    filaAcciones.className = "acciones-reaccion";
 
-  const botonAgregar = document.createElement("button");
-  botonAgregar.type = "button";
-  botonAgregar.className = "boton-agregar-reaccion";
-  botonAgregar.title = "Agregar reacción";
-  botonAgregar.textContent = "😊 +";
+    const botonAgregar = document.createElement("button");
+    botonAgregar.type = "button";
+    botonAgregar.className = "boton-agregar-reaccion";
+    botonAgregar.title = "Agregar reacción";
+    botonAgregar.textContent = "😊 +";
 
-  const menu = document.createElement("div");
-  menu.className = "menu-reacciones";
-  EMOJIS_REACCION.forEach((emoji) => {
-    const boton = document.createElement("button");
-    boton.type = "button";
-    boton.textContent = emoji;
-    boton.title = "Reaccionar con " + emoji;
-    boton.addEventListener("click", (evento) => {
-      evento.stopPropagation();
-      socket.emit("reaccionar_mensaje", {
-        id_equipo: idEquipo,
-        id_mensaje: mensaje.id,
-        emoji: emoji,
+    const menu = document.createElement("div");
+    menu.className = "menu-reacciones";
+    EMOJIS_REACCION.forEach((emoji) => {
+      const boton = document.createElement("button");
+      boton.type = "button";
+      boton.textContent = emoji;
+      boton.title = "Reaccionar con " + emoji;
+      boton.addEventListener("click", (evento) => {
+        evento.stopPropagation();
+        socket.emit("reaccionar_mensaje", {
+          id_equipo: idEquipo,
+          id_mensaje: mensaje.id,
+          emoji: emoji,
+        });
+        menu.classList.remove("abierto");
       });
-      menu.classList.remove("abierto");
+      menu.appendChild(boton);
     });
-    menu.appendChild(boton);
-  });
 
-  botonAgregar.addEventListener("click", (evento) => {
-    evento.stopPropagation();
-    document.querySelectorAll(".menu-reacciones.abierto").forEach((otro) => {
-      if (otro !== menu) otro.classList.remove("abierto");
+    botonAgregar.addEventListener("click", (evento) => {
+      evento.stopPropagation();
+      document.querySelectorAll(".menu-reacciones.abierto").forEach((otro) => {
+        if (otro !== menu) otro.classList.remove("abierto");
+      });
+      menu.classList.toggle("abierto");
     });
-    menu.classList.toggle("abierto");
-  });
 
-  filaAcciones.appendChild(botonAgregar);
-  filaAcciones.appendChild(menu);
-  grupo.appendChild(filaAcciones);
+    filaAcciones.appendChild(botonAgregar);
+    filaAcciones.appendChild(menu);
+    grupo.appendChild(filaAcciones);
+  }
 
   listaMensajes.appendChild(linea);
   dibujarReacciones(mensaje);

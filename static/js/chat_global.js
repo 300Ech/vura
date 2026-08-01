@@ -16,19 +16,118 @@ const emojisReaccionPanel = ["👍", "❤️", "😂", "🎉", "👀"];
 window.socketChat = io();
 let historialCargado = false;
 
+// Misma cola IndexedDB (Dexie) que el chat completo.
+let almacenPanel = null;
+async function obtenerAlmacenPanel() {
+  if (!almacenPanel) {
+    almacenPanel = await import("/colaboracion/static/almacen_local.js");
+  }
+  return almacenPanel;
+}
+
+function horaAhoraPanel() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
+
+function quitarPendientePanel(idLocal) {
+  const clave = "pendiente-" + idLocal;
+  datosMensajesPanel.delete(clave);
+  document.getElementById("mensaje-panel-" + clave)?.remove();
+}
+
+async function encolarMensajePanel(texto) {
+  const almacen = await obtenerAlmacenPanel();
+  const idLocal = await almacen.guardarMensajePendiente({
+    id_equipo: idEquipo,
+    texto: texto,
+  });
+  agregarMensajePanel({
+    id: "pendiente-" + idLocal,
+    id_usuario: idUsuarioActual,
+    nombre: "Tú",
+    texto: texto,
+    hora: horaAhoraPanel(),
+    pendiente: true,
+    reacciones: { totales: {}, mias: [] },
+  });
+}
+
+// Evita que "connect" y "online" manden la misma cola a la vez.
+let enviandoColaPanel = false;
+
+function emitirMensajePanelConAck(texto) {
+  return new Promise((resolver) => {
+    let listo = false;
+    const terminar = (ok) => {
+      if (listo) return;
+      listo = true;
+      resolver(ok);
+    };
+    const temporizador = setTimeout(() => terminar(false), 8000);
+    socketChat.emit("enviar_mensaje", { id_equipo: idEquipo, texto: texto }, (respuesta) => {
+      clearTimeout(temporizador);
+      terminar(Boolean(respuesta && respuesta.ok));
+    });
+  });
+}
+
+async function enviarColaPanel() {
+  if (enviandoColaPanel || !navigator.onLine || !socketChat.connected) return;
+  enviandoColaPanel = true;
+  try {
+    const almacen = await obtenerAlmacenPanel();
+    const pendientes = await almacen.listarMensajesPendientes(idEquipo);
+    for (const pendiente of pendientes) {
+      const ok = await emitirMensajePanelConAck(pendiente.texto);
+      if (!ok) break;
+      await almacen.borrarMensajePendiente(pendiente.id);
+      quitarPendientePanel(pendiente.id);
+    }
+  } finally {
+    enviandoColaPanel = false;
+  }
+}
+
+async function mostrarPendientesPanel() {
+  const almacen = await obtenerAlmacenPanel();
+  const pendientes = await almacen.listarMensajesPendientes(idEquipo);
+  for (const pendiente of pendientes) {
+    if (datosMensajesPanel.has("pendiente-" + pendiente.id)) continue;
+    agregarMensajePanel({
+      id: "pendiente-" + pendiente.id,
+      id_usuario: idUsuarioActual,
+      nombre: "Tú",
+      texto: pendiente.texto,
+      hora: horaAhoraPanel(),
+      pendiente: true,
+      reacciones: { totales: {}, mias: [] },
+    });
+  }
+}
+
 socketChat.on("connect", () => {
   socketChat.emit("unirse_sala", { id_equipo: idEquipo });
+  enviarColaPanel();
 });
+
+window.addEventListener("online", () => enviarColaPanel());
 
 document.getElementById("boton-panel-chat").addEventListener("click", async () => {
   badgeChat.classList.remove("visible");
   panelChat.classList.toggle("abierto");
   if (!panelChat.classList.contains("abierto")) return;
   if (!historialCargado) {
-    historialCargado = true;
-    const respuesta = await fetch(`/equipos/${idEquipo}/chat/mensajes`);
-    const datos = await respuesta.json();
-    datos.mensajes.forEach(agregarMensajePanel);
+    try {
+      const respuesta = await fetch(`/equipos/${idEquipo}/chat/mensajes`);
+      const datos = await respuesta.json();
+      datos.mensajes.forEach(agregarMensajePanel);
+      historialCargado = true;
+    } catch (error) {
+      // Sin red: solo se muestran los pendientes locales.
+      // No marcamos historialCargado para reintentar al volver la red.
+    }
+    await mostrarPendientesPanel();
   }
   textoChatPanel.focus();
 });
@@ -39,8 +138,11 @@ document.getElementById("boton-cerrar-chat").addEventListener("click", () => {
 
 socketChat.on("nuevo_mensaje", (mensaje) => {
   avisoEscribiendoPanel.textContent = "";
-  if (historialCargado && !datosMensajesPanel.has(mensaje.id)) agregarMensajePanel(mensaje);
-  
+  // Si el panel está abierto, mostrar aunque el historial del servidor aún no cargó
+  // (p. ej. se abrió sin red y después volvió la conexión).
+  const mostrar = historialCargado || panelChat.classList.contains("abierto");
+  if (mostrar && !datosMensajesPanel.has(mensaje.id)) agregarMensajePanel(mensaje);
+
   if (!panelChat.classList.contains("abierto") && mensaje.id_usuario !== idUsuarioActual) {
     badgeChat.classList.add("visible");
   }
@@ -90,14 +192,25 @@ textoChatPanel.addEventListener("keydown", (evento) => {
   }
 });
 
-formularioChatPanel.addEventListener("submit", (evento) => {
+formularioChatPanel.addEventListener("submit", async (evento) => {
   evento.preventDefault();
   const texto = textoChatPanel.value.trim();
   if (!texto) return;
-  socketChat.emit("enviar_mensaje", { id_equipo: idEquipo, texto: texto });
+  if (!navigator.onLine || !socketChat.connected) {
+    try {
+      await encolarMensajePanel(texto);
+    } catch (error) {
+      return; // si IndexedDB falla, el texto se queda en el campo
+    }
+    textoChatPanel.value = "";
+    ajustarAltoCampoPanel();
+    textoChatPanel.focus();
+    return;
+  }
   textoChatPanel.value = "";
   ajustarAltoCampoPanel();
   textoChatPanel.focus();
+  socketChat.emit("enviar_mensaje", { id_equipo: idEquipo, texto: texto });
 });
 
 // Emojis del panel.
@@ -197,7 +310,8 @@ function agregarMensajePanel(mensaje) {
   datosMensajesPanel.set(mensaje.id, mensaje);
   const esMio = mensaje.id_usuario === idUsuarioActual;
   const burbuja = document.createElement("div");
-  burbuja.className = "burbuja-panel small" + (esMio ? " mia" : "");
+  burbuja.id = "mensaje-panel-" + mensaje.id;
+  burbuja.className = "burbuja-panel small" + (esMio ? " mia" : "") + (mensaje.pendiente ? " pendiente" : "");
 
   const encabezado = document.createElement("div");
   encabezado.className = "small " + (esMio ? "text-white-50" : "text-muted");
@@ -226,49 +340,57 @@ function agregarMensajePanel(mensaje) {
     burbuja.appendChild(audio);
   }
 
+  if (mensaje.pendiente) {
+    const etiqueta = document.createElement("div");
+    etiqueta.className = "etiqueta-pendiente";
+    etiqueta.textContent = "⏳ pendiente";
+    burbuja.appendChild(etiqueta);
+  }
+
   const reacciones = document.createElement("div");
   reacciones.id = "reacciones-panel-" + mensaje.id;
   reacciones.className = "reacciones-panel";
   burbuja.appendChild(reacciones);
 
-  // Un solo botón "reaccionar"; el menú de emojis se abre al hacer clic.
-  const filaAcciones = document.createElement("div");
-  filaAcciones.className = "acciones-reaccion-panel";
+  if (!mensaje.pendiente) {
+    const filaAcciones = document.createElement("div");
+    filaAcciones.className = "acciones-reaccion-panel";
 
-  const botonAgregar = document.createElement("button");
-  botonAgregar.type = "button";
-  botonAgregar.className = "boton-agregar-reaccion";
-  botonAgregar.title = "Agregar reacción";
-  botonAgregar.textContent = "😊+";
+    const botonAgregar = document.createElement("button");
+    botonAgregar.type = "button";
+    botonAgregar.className = "boton-agregar-reaccion";
+    botonAgregar.title = "Agregar reacción";
+    botonAgregar.textContent = "😊+";
 
-  const menu = document.createElement("div");
-  menu.className = "menu-reacciones-panel";
-  emojisReaccionPanel.forEach((emoji) => {
-    const boton = document.createElement("button");
-    boton.type = "button";
-    boton.textContent = emoji;
-    boton.title = "Reaccionar con " + emoji;
-    boton.addEventListener("click", (evento) => {
-      evento.stopPropagation();
-      socketChat.emit("reaccionar_mensaje", {
-        id_equipo: idEquipo, id_mensaje: mensaje.id, emoji: emoji,
+    const menu = document.createElement("div");
+    menu.className = "menu-reacciones-panel";
+    emojisReaccionPanel.forEach((emoji) => {
+      const boton = document.createElement("button");
+      boton.type = "button";
+      boton.textContent = emoji;
+      boton.title = "Reaccionar con " + emoji;
+      boton.addEventListener("click", (evento) => {
+        evento.stopPropagation();
+        socketChat.emit("reaccionar_mensaje", {
+          id_equipo: idEquipo, id_mensaje: mensaje.id, emoji: emoji,
+        });
+        menu.classList.remove("abierto");
       });
-      menu.classList.remove("abierto");
+      menu.appendChild(boton);
     });
-    menu.appendChild(boton);
-  });
 
-  botonAgregar.addEventListener("click", (evento) => {
-    evento.stopPropagation();
-    document.querySelectorAll(".menu-reacciones-panel.abierto").forEach((otro) => {
-      if (otro !== menu) otro.classList.remove("abierto");
+    botonAgregar.addEventListener("click", (evento) => {
+      evento.stopPropagation();
+      document.querySelectorAll(".menu-reacciones-panel.abierto").forEach((otro) => {
+        if (otro !== menu) otro.classList.remove("abierto");
+      });
+      menu.classList.toggle("abierto");
     });
-    menu.classList.toggle("abierto");
-  });
 
-  filaAcciones.appendChild(botonAgregar);
-  filaAcciones.appendChild(menu);
-  burbuja.appendChild(filaAcciones);
+    filaAcciones.appendChild(botonAgregar);
+    filaAcciones.appendChild(menu);
+    burbuja.appendChild(filaAcciones);
+  }
 
   mensajesPanel.appendChild(burbuja);
   dibujarReaccionesPanel(mensaje);

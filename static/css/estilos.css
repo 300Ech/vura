@@ -44,6 +44,40 @@ body {
   color: var(--border-dark);
 }
 
+/* Aviso claro cuando no hay internet (además del badge del sidebar). */
+.banner-sin-conexion {
+  position: fixed;
+  top: 0;
+  left: var(--sidebar-width);
+  right: 0;
+  z-index: 2000;
+  background: var(--sticky-yellow);
+  color: var(--border-dark);
+  border-bottom: var(--border-thickness) solid var(--border-dark);
+  box-shadow: var(--shadow-hard-sm);
+  padding: 8px 16px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.etiqueta-pendiente {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 0.7rem;
+  opacity: 0.85;
+  font-weight: 700;
+}
+
+.burbuja-chat.pendiente,
+.burbuja-panel.pendiente {
+  opacity: 0.75;
+}
+
+body.sin-conexion .main-content {
+  padding-top: 44px;
+}
+
 /* Tipografía a mano para títulos */
 h1, h2, h3, h4, h5, h6, .brand-text {
   font-family: 'Caveat', cursive;

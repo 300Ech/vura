@@ -6,6 +6,11 @@ const bd = new Dexie("vura");
 bd.version(1).stores({
   documentos: "clave", // clave = "tipo:idProyecto", estado = bytes del documento Yjs
 });
+// v2: cola simple de mensajes de chat pendientes de enviar.
+bd.version(2).stores({
+  documentos: "clave",
+  mensajes_pendientes: "++id, id_equipo",
+});
 
 export async function cargarDocumentoLocal(clave) {
   const registro = await bd.documentos.get(clave);
@@ -14,4 +19,16 @@ export async function cargarDocumentoLocal(clave) {
 
 export async function guardarDocumentoLocal(clave, estado) {
   await bd.documentos.put({ clave: clave, estado: estado });
+}
+
+export async function guardarMensajePendiente(datos) {
+  return await bd.mensajes_pendientes.add(datos);
+}
+
+export async function listarMensajesPendientes(idEquipo) {
+  return await bd.mensajes_pendientes.where("id_equipo").equals(idEquipo).toArray();
+}
+
+export async function borrarMensajePendiente(id) {
+  await bd.mensajes_pendientes.delete(id);
 }

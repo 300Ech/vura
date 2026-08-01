@@ -81,6 +81,14 @@ def service_worker():
     return app.send_static_file("sw.js")
 
 
+@app.route("/manifest.webmanifest")
+def manifesto():
+    # MIME correcto: algunos navegadores no instalan la PWA si llega como texto plano.
+    return app.send_static_file("manifest.webmanifest"), 200, {
+        "Content-Type": "application/manifest+json",
+    }
+
+
 if __name__ == "__main__":
     # En Railway el puerto llega en la variable PORT; localmente se usa el 5000 de siempre.
     puerto = int(os.environ.get("PORT", 5000))
