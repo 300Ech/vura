@@ -178,7 +178,7 @@ h1, h2, h3, h4, h5, h6, .brand-text {
   border: var(--border-thickness) solid var(--border-dark) !important;
   border-radius: var(--radius-card) !important;
   box-shadow: var(--shadow-hard) !important;
-  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
   position: relative;
 }
 

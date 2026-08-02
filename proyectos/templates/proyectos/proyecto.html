@@ -38,7 +38,13 @@
     <div class="card text-center bg-sticky-yellow tilt-left">
       <div class="card-body">
         <h2 class="h6">Tareas</h2>
-        <p class="text-muted small">{{ proyecto.tareas | length }} tarea(s)</p>
+        {% set total = proyecto.tareas | length %}
+        {% set terminadas = proyecto.tareas | selectattr("estado", "equalto", "terminada") | list | length %}
+        {% set progreso = (terminadas / total * 100) | round | int if total > 0 else 0 %}
+        <div class="progress mb-2 mx-auto" style="height: 24px; max-width: 80%; border: 2px solid var(--border-dark); border-radius: var(--radius-pill); background-color: #fff; box-shadow: 2px 2px 0px var(--border-dark);">
+          <div class="progress-bar bg-success text-dark fw-bold" role="progressbar" style="width: {{ progreso }}%;" aria-valuenow="{{ progreso }}" aria-valuemin="0" aria-valuemax="100">{{ progreso }}%</div>
+        </div>
+        <p class="text-muted small">{{ total }} tarea(s) en total</p>
         <a class="btn btn-outline-primary btn-sm" href="{{ url_for('tareas.tablero', id_proyecto=proyecto.id) }}">
           Abrir tablero
         </a>

@@ -58,6 +58,18 @@ function dibujarTablero() {
     }
     porEstado[estado].forEach((tarea) => columna.appendChild(crearTarjeta(tarea)));
   });
+
+  // Actualizar barra de progreso
+  const total = mapaTareas.size;
+  const terminadas = porEstado["terminada"] ? porEstado["terminada"].length : 0;
+  const progreso = total > 0 ? Math.round((terminadas / total) * 100) : 0;
+  const barra = document.getElementById("barra-progreso-tablero");
+  const texto = document.getElementById("texto-progreso-tablero");
+  if (barra && texto) {
+    barra.style.width = progreso + "%";
+    barra.setAttribute("aria-valuenow", progreso);
+    texto.textContent = progreso + "%";
+  }
 }
 
 function crearTarjeta(tarea) {
