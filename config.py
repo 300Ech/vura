@@ -68,8 +68,8 @@ class Config:
     SMTP_SSL = os.environ.get("VURA_SMTP_SSL", "false").lower() == "true"
     # peso máximo de archivos o audios que los estudiantes pueden subir a la app (máximo 30 megabytes)
     MAX_CONTENT_LENGTH = 30 * 1024 * 1024
-    # interruptor global para mostrar el botón de compartir pantalla en las videollamadas (apagado por defecto)
-    COMPARTIR_PANTALLA_HABILITADO = os.environ.get("VURA_COMPARTIR_PANTALLA_HABILITADO", "false").lower() == "true"
-    # interruptor global para mostrar el botón de difuminar el fondo en las videollamadas (apagado por defecto)
-    DESENFOQUE_FONDO_HABILITADO = os.environ.get("VURA_DESENFOQUE_FONDO_HABILITADO", "false").lower() == "true"
+    # interruptor global para mostrar el botón de compartir pantalla en las videollamadas (activado por defecto)
+    COMPARTIR_PANTALLA_HABILITADO = os.environ.get("VURA_COMPARTIR_PANTALLA_HABILITADO", "true").lower() == "true"
+    # interruptor global para mostrar el botón de difuminar el fondo en las videollamadas (activado por defecto)
+    DESENFOQUE_FONDO_HABILITADO = os.environ.get("VURA_DESENFOQUE_FONDO_HABILITADO", "true").lower() == "true"
 
