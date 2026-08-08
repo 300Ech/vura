@@ -1,15 +1,15 @@
-// Catálogo de temas y plantillas de las diapositivas.
-//
-// Una plantilla NO es código: es una lista de "piezas" (rectángulos, círculos,
-// líneas y textos) con sus posiciones sobre una diapositiva de 960 x 540.
-// presentaciones.js se encarga de convertir cada pieza en un objeto de Fabric.
-// Así, agregar una plantilla nueva es escribir unas líneas de datos.
-//
-// Los colores no se escriben a mano: se pide un "papel" del tema activo
-// ("acento", "texto", "suave", "claro"), y por eso todas las plantillas
-// combinan bien con cualquier tema.
+// este archivo contiene la colección de temas de colores y diseños de láminas.
+// su propósito es ofrecer combinaciones de colores (claros, oscuros y
+// llamativos)
+// y distribuciones listas para usar (portadas, listas de puntos, comparaciones)
+// para las diapositivas de la exposición. lo hace entregando listas organizadas
+// de combinaciones de fuentes y colores. se diseñó así para que los
+// alumnos armen
+// presentaciones bonitas y legibles de forma rápida y sin esfuerzo.
+
 
 export const TEMAS = [
+
   {
     id: "papel",
     nombre: "Papel",
@@ -421,7 +421,8 @@ export const PLANTILLAS = [
   },
 ];
 
-// Iconos de Bootstrap Icons (licencia MIT) que se pueden insertar en una diapositiva.
+// Iconos de Bootstrap Icons (licencia MIT) que se pueden insertar en una
+// diapositiva.
 export const ICONOS = [
   "lightbulb-fill", "star-fill", "heart-fill", "check-circle-fill", "x-circle-fill",
   "trophy-fill", "rocket-takeoff-fill", "people-fill", "person-fill", "chat-dots-fill",

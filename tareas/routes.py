@@ -1,46 +1,71 @@
+# este archivo controla la lógica del tablero de tareas, el cambio de estado de
+# cada tarjeta, los comentarios y la subida de archivos adjuntos. su propósito es
+# ofrecer un panel dinámico donde el grupo gestione su avance en tiempo real. lo
+# hace actualizando la base de datos según el movimiento de tarjetas, notificando
+# a los compañeros y almacenando archivos de hasta 5mb. se creó así para mantener
+# una gestión de responsabilidades ágil y transparente.
+
+
+# importamos herramientas para manejar datos organizados, archivos y horas
 import json
+
+
 import os
 import uuid as modulo_uuid
 from datetime import date
 
+# importamos las funciones para responder pantallas web, datos y descargas de archivos
 from flask import Blueprint, render_template, request, jsonify, abort, send_from_directory
+# importamos la verificación de sesión del estudiante
 from flask_login import login_required, current_user
+# importamos la limpieza de nombres de archivos cargados
 from werkzeug.utils import secure_filename
 
+# importamos la función para notificar al equipo cuando se crean o mueven tareas
 from chat.routes import notificar_equipo
+# importamos la ruta de almacenamiento de archivos
 from config import RUTA_DATOS
+# importamos la base de datos y la función de hora local
 from extensiones import db, hora_local
+# importamos los modelos de proyecto y tareas
 from proyectos.models import Proyecto
 from tareas.models import Tarea, ComentarioTarea, ArchivoTarea, ESTADOS_TAREA, TITULOS_ESTADO
 
+# creamos la sección de tareas
 tareas = Blueprint("tareas", __name__, template_folder="templates",
                    static_folder="static", static_url_path="/tareas/static")
 
+# límite máximo de tareas permitidas por tablero para mantener la fluidez
 LIMITE_TAREAS = 300
 
-# Los archivos adjuntos se guardan en la carpeta "archivos" (dentro de la ruta de datos);
-# en la base de datos solo se guarda el registro de cada uno.
+# carpeta en la computadora donde se guardan físicamente las fotos y documentos adjuntados a las tareas
 CARPETA_ARCHIVOS = os.path.join(RUTA_DATOS, "archivos")
+# tipos de archivos permitidos para subir en las tareas (pdf, imágenes, word, ppt, excel, texto)
 EXTENSIONES_PERMITIDAS = {"pdf", "png", "jpg", "jpeg", "gif", "docx", "pptx", "xlsx", "txt"}
-TAMANO_MAXIMO = 5 * 1024 * 1024  # 5 MB
+# peso máximo permitido para cada archivo subido (máximo 5 megabytes)
+TAMANO_MAXIMO = 5 * 1024 * 1024
 
 
 def obtener_proyecto_de_miembro(id_proyecto):
+    """comprueba que el proyecto exista y que el alumno conectado pertenezca al equipo dueño del proyecto."""
     proyecto = db.get_or_404(Proyecto, id_proyecto)
     if not proyecto.equipo.es_miembro(current_user):
         abort(403)
     return proyecto
 
 
+# pantalla principal del tablero de tareas por columnas (pendiente, en progreso, terminada)
 @tareas.route("/proyectos/<int:id_proyecto>/tareas")
 @login_required
 def tablero(id_proyecto):
     proyecto = obtener_proyecto_de_miembro(id_proyecto)
 
+    # organizamos las tarjetas de tareas por columnas según su estado
     columnas = {estado: [] for estado in ESTADOS_TAREA}
     for tarea in proyecto.tareas:
         columnas[tarea.estado].append(tarea)
 
+    # datos completos del tablero formateados para cargarse dinámicamente en pantalla
     datos_tablero = {
         "id_proyecto": proyecto.id,
         "tareas": [
@@ -51,7 +76,7 @@ def tablero(id_proyecto):
                 "estado": t.estado,
                 "id_asignado": t.id_asignado,
                 "fecha_limite": t.fecha_limite.isoformat() if t.fecha_limite else None,
-                "creado_en": t.id,  # solo para conservar el orden de creación
+                "creado_en": t.id,
                 "orden": t.orden if t.orden is not None else t.id,
             }
             for t in proyecto.tareas
@@ -62,21 +87,17 @@ def tablero(id_proyecto):
             for m in proyecto.equipo.miembros
         ],
     }
-    # Se escapa '<' para que un texto con '</script>' no pueda romper la etiqueta donde va incrustado el JSON.
+    # previene problemas de seguridad al incrustar el contenido del tablero en la página
     datos_tablero = json.dumps(datos_tablero, ensure_ascii=False).replace("<", "\\u003c")
 
     return render_template("tareas/tablero.html", proyecto=proyecto, columnas=columnas,
                            titulos_estado=TITULOS_ESTADO, datos_tablero=datos_tablero)
 
 
+# guarda las modificaciones del tablero de tareas cuando los alumnos mueven tarjetas de una columna a otra
 @tareas.route("/proyectos/<int:id_proyecto>/tareas/copia", methods=["POST"])
 @login_required
 def guardar_copia(id_proyecto):
-    """Actualiza la copia de lectura en SQLite a partir del documento Yjs del tablero.
-
-    La fuente de verdad es el documento Yjs; esta tabla solo sirve para
-    renderizar páginas y, más adelante, exportar.
-    """
     proyecto = obtener_proyecto_de_miembro(id_proyecto)
 
     datos = request.get_json(silent=True)
@@ -87,6 +108,7 @@ def guardar_copia(id_proyecto):
     existentes = {t.uuid: t for t in proyecto.tareas}
     uuids_recibidos = set()
 
+    # recorremos cada tarea recibida para crearla o actualizar su columna de estado
     for entrada in datos["tareas"]:
         uuid_tarea = str(entrada.get("uuid") or "")[:36]
         titulo = str(entrada.get("titulo") or "").strip()[:120]
@@ -116,6 +138,7 @@ def guardar_copia(id_proyecto):
             orden = tarea.id if tarea else 0
 
         uuids_recibidos.add(uuid_tarea)
+        # si es una tarea totalmente nueva la agregamos y notificamos al equipo
         if tarea is None:
             tarea = Tarea(uuid=uuid_tarea, id_proyecto=proyecto.id)
             db.session.add(tarea)
@@ -125,6 +148,7 @@ def guardar_copia(id_proyecto):
                 f"{current_user.nombre} creó la tarea «{titulo}».",
                 f"/proyectos/{proyecto.id}/tareas",
             )
+        # si se movió la tarea a otra columna, enviamos notificación al resto de compañeros
         elif tarea.estado != estado:
             notificar_equipo(
                 proyecto.equipo.id,
@@ -141,6 +165,7 @@ def guardar_copia(id_proyecto):
         tarea.fecha_limite = fecha_limite
         tarea.actualizado_por = current_user.id
 
+    # si una tarea fue eliminada del tablero, borramos sus comentarios y archivos adjuntos
     for uuid_tarea, tarea in existentes.items():
         if uuid_tarea not in uuids_recibidos:
             borrar_comentarios_y_archivos(uuid_tarea)
@@ -150,12 +175,8 @@ def guardar_copia(id_proyecto):
     return jsonify({"guardado": True})
 
 
-# ---- Comentarios y archivos adjuntos de una tarea ----
-# Se guardan con el uuid de la tarea, que es su identificador estable en el tablero.
-
-
 def contar_comentarios_y_archivos(proyecto):
-    """Cuántos comentarios y archivos tiene cada tarea, para mostrarlo en las tarjetas."""
+    """cuenta cuántos comentarios y archivos tiene cada tarea para mostrar el numerito en la tarjeta visual."""
     uuids = [t.uuid for t in proyecto.tareas]
     contadores = {u: {"comentarios": 0, "archivos": 0} for u in uuids}
     for comentario in ComentarioTarea.query.filter(ComentarioTarea.uuid_tarea.in_(uuids)):
@@ -166,7 +187,7 @@ def contar_comentarios_y_archivos(proyecto):
 
 
 def borrar_comentarios_y_archivos(uuid_tarea):
-    """Al borrar una tarea del tablero se borra también lo que tenía adjunto."""
+    """borra del disco y de la base de datos los comentarios y archivos vinculados a una tarea eliminada."""
     ComentarioTarea.query.filter_by(uuid_tarea=uuid_tarea).delete()
     for archivo in ArchivoTarea.query.filter_by(uuid_tarea=uuid_tarea):
         ruta = os.path.join(CARPETA_ARCHIVOS, archivo.nombre_guardado)
@@ -175,6 +196,7 @@ def borrar_comentarios_y_archivos(uuid_tarea):
         db.session.delete(archivo)
 
 
+# devuelve la lista de comentarios y archivos subidos dentro de una tarjeta de tarea específica
 @tareas.route("/proyectos/<int:id_proyecto>/tareas/<uuid_tarea>/detalles")
 @login_required
 def detalles_tarea(id_proyecto, uuid_tarea):
@@ -195,6 +217,7 @@ def detalles_tarea(id_proyecto, uuid_tarea):
     })
 
 
+# permite a un alumno dejar un comentario o pregunta dentro de una tarea en particular
 @tareas.route("/proyectos/<int:id_proyecto>/tareas/<uuid_tarea>/comentarios", methods=["POST"])
 @login_required
 def comentar_tarea(id_proyecto, uuid_tarea):
@@ -207,6 +230,7 @@ def comentar_tarea(id_proyecto, uuid_tarea):
     db.session.add(comentario)
     db.session.commit()
 
+    # notificamos al equipo sobre el nuevo comentario agregado
     proyecto = db.session.get(Proyecto, id_proyecto)
     tarea = Tarea.query.filter_by(uuid=uuid_tarea[:36]).first()
     notificar_equipo(
@@ -219,6 +243,7 @@ def comentar_tarea(id_proyecto, uuid_tarea):
                     "fecha": hora_local(comentario.creado_en)})
 
 
+# permite subir un documento o imagen adjunta a una tarjeta de tarea específica
 @tareas.route("/proyectos/<int:id_proyecto>/tareas/<uuid_tarea>/archivos", methods=["POST"])
 @login_required
 def subir_archivo(id_proyecto, uuid_tarea):
@@ -229,14 +254,16 @@ def subir_archivo(id_proyecto, uuid_tarea):
 
     nombre_original = secure_filename(archivo.filename)[:120]
     extension = nombre_original.rsplit(".", 1)[-1].lower() if "." in nombre_original else ""
+    # rechaza archivos con formato no permitido (como ejecutables sospechosos)
     if extension not in EXTENSIONES_PERMITIDAS:
         return jsonify({"error": "Tipo de archivo no permitido."}), 400
 
     contenido = archivo.read()
+    # rechaza archivos que superen los 5 megabytes de peso
     if len(contenido) > TAMANO_MAXIMO:
         return jsonify({"error": "El archivo pesa más de 5 MB."}), 400
 
-    # En el disco se usa un nombre inventado para evitar choques entre archivos iguales.
+    # le asigna un nombre secreto e irrepetible para guardarlo en la carpeta sin sobreescribir otros
     nombre_guardado = modulo_uuid.uuid4().hex + "." + extension
     os.makedirs(CARPETA_ARCHIVOS, exist_ok=True)
     with open(os.path.join(CARPETA_ARCHIVOS, nombre_guardado), "wb") as destino:
@@ -258,6 +285,7 @@ def subir_archivo(id_proyecto, uuid_tarea):
     return jsonify({"id": registro.id, "nombre": registro.nombre_original, "autor": current_user.nombre})
 
 
+# permite descargar en la computadora un archivo adjunto que subió un compañero a una tarea
 @tareas.route("/proyectos/<int:id_proyecto>/archivos/<int:id_archivo>")
 @login_required
 def descargar_archivo(id_proyecto, id_archivo):
@@ -265,3 +293,4 @@ def descargar_archivo(id_proyecto, id_archivo):
     archivo = db.get_or_404(ArchivoTarea, id_archivo)
     return send_from_directory(CARPETA_ARCHIVOS, archivo.nombre_guardado,
                                as_attachment=True, download_name=archivo.nombre_original)
+

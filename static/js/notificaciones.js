@@ -1,10 +1,15 @@
-// Notificaciones en toda la aplicación: mensajes de chat y llamadas de mis equipos.
-// Este archivo se carga en todas las páginas (para usuarios con sesión iniciada).
-// El servidor nos une a las salas de nuestros equipos y aquí decidimos cómo avisar:
-// - Toast dentro de la página (siempre).
-// - Notificación del sistema (si el usuario dio permiso y la pestaña está en segundo plano).
+// este archivo administra las alertas visuales y sonoras flotantes en toda la
+// plataforma. su propósito es avisar al estudiante cuando un compañero edita la
+// pizarra, envía un mensaje al chat o inicia una videollamada. lo hace
+// mostrando
+// un cuadro flotante emergente en la esquina de la pantalla y reproduciendo un
+// tono suave. se diseñó de este modo para mantener enterados a los alumnos
+// de los
+// avances de su equipo.
+
 
 const miId = Number(document.body.dataset.idUsuario);
+
 const socketNotificaciones = io();
 
 socketNotificaciones.on("connect", () => {
@@ -12,7 +17,8 @@ socketNotificaciones.on("connect", () => {
 });
 
 // El permiso del navegador se pide en el primer clic, no al cargar la página
-// (los navegadores bloquean las solicitudes que no vienen de una acción del usuario).
+// (los navegadores bloquean las solicitudes que no vienen de una acción
+// del usuario).
 document.addEventListener("click", function pedirPermiso() {
   if ("Notification" in window && Notification.permission === "default") {
     Notification.requestPermission();
@@ -72,7 +78,8 @@ socketNotificaciones.on("nuevo_mensaje", (datos) => {
 });
 
 // Aviso genérico: notas, tareas, comentarios, archivos, diapositivas...
-// El servidor manda título, texto y enlace; aquí solo se decide si mostrarlo.
+// El equipo emisor de la página manda título, texto y enlace; aquí solo se
+// decide si mostrarlo.
 socketNotificaciones.on("notificacion", (datos) => {
   if (datos.id_usuario === miId) return; // lo que hago yo no se me notifica
   reproducirSonidoNotificacion();
@@ -90,7 +97,8 @@ socketNotificaciones.on("llamada_iniciada", (datos) => {
 });
 
 function notificar(titulo, texto, enlace) {
-  // Con la pestaña en segundo plano y permiso dado, se usa la notificación del sistema.
+  // Con la pestaña en segundo plano y permiso dado, se usa la notificación
+  // del sistema.
   if (document.hidden && "Notification" in window && Notification.permission === "granted") {
     const notificacion = new Notification(titulo, { body: texto });
     notificacion.addEventListener("click", () => {

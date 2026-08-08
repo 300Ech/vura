@@ -1,9 +1,17 @@
-// Service Worker de Vura: permite abrir la aplicación sin conexión.
-// Librerías de CDN (versionadas, nunca cambian): caché primero.
-// Todo lo propio (páginas y archivos de la app): red primero, caché de respaldo.
+// este archivo actúa como un asistente en segundo plano para permitir el uso
+// de la página sin conexión a internet. su propósito es guardar copias de
+// seguridad de los botones, estilos e imágenes para que la pantalla abra rápido
+// aun cuando falle la red. lo hace almacenando los componentes en la
+// memoria del
+// navegador. se diseñó así para garantizar la disponibilidad continua del
+// sitio.
+
+
 const NOMBRE_CACHE = "vura-v8";
 
-// Shell útil: estilos, JS, PWA, cola offline y Bootstrap (CDN). No incluye socket.io.
+
+// Shell útil: estilos, JS, PWA, cola offline y Bootstrap (CDN). No incluye
+// socket.io.
 const PRECACHE = [
   "/manifest.webmanifest",
   "/static/css/estilos.css",
@@ -48,7 +56,8 @@ self.addEventListener("fetch", (evento) => {
   if (url.origin !== location.origin && !esCdn) return;
 
   if (esCdn) {
-    // Librerías de CDN: caché primero (sus URL llevan versión y nunca cambian).
+    // Librerías de CDN: caché primero (sus enlace del archivo llevan versión y
+    // nunca cambian).
     evento.respondWith(
       caches.open(NOMBRE_CACHE).then(async (cache) => {
         const guardada = await cache.match(peticion);

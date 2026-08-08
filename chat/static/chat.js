@@ -1,6 +1,15 @@
-// Chat en tiempo real: texto, emojis, imágenes, Voz-it y reacciones.
+// este archivo administra la comunicación interactiva del chat grupal en
+// tiempo real. su propósito es permitir que los integrantes del equipo envíen
+// mensajes de texto, audios de voz grabados, fotos y reacciones con emojis. lo
+// hace enviando y recibiendo los mensajes al instante y mostrándolos en la
+// pantalla sin necesidad de recargar la página. elegimos la herramienta de
+// transmisión en tiempo real porque permite a los alumnos coordinarse de forma
+// inmediata y ágil. se creó así para mantener unidos a los miembros del grupo.
+
+
 const contenedorChat = document.getElementById("chat");
 const idEquipo = Number(contenedorChat.dataset.idEquipo);
+
 const idUsuarioActual = Number(contenedorChat.dataset.idUsuario);
 const mensajes = new Map();
 const EMOJIS_REACCION = ["👍", "❤️", "😂", "🎉", "👀"];
@@ -12,7 +21,8 @@ const avisoEscribiendo = document.getElementById("aviso-escribiendo");
 const botonVoz = document.getElementById("boton-voz-chat");
 const socket = io();
 
-// Dexie vive en almacen_local.js (módulo); lo cargamos cuando hace falta.
+// Dexie vive en almacen_local.js (archivo auxiliar); lo cargamos cuando
+// hace falta.
 let almacenChat = null;
 async function obtenerAlmacen() {
   if (!almacenChat) {
@@ -60,7 +70,8 @@ function emitirMensajeConAck(texto) {
       listo = true;
       resolver(ok);
     };
-    // Si el servidor no responde en 8s, se reintenta después (el mensaje sigue en IndexedDB).
+    // Si el equipo emisor de la página no responde en 8s, se reintenta después
+    // (el mensaje sigue en IndexedDB).
     const temporizador = setTimeout(() => terminar(false), 8000);
     socket.emit("enviar_mensaje", { id_equipo: idEquipo, texto: texto }, (respuesta) => {
       clearTimeout(temporizador);

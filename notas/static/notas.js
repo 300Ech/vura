@@ -1,9 +1,19 @@
-// Pizarra colaborativa (estilo FigJam): Fabric.js + Yjs.
-// Cada post-it, texto o trazo es una entrada en el mapa compartido de Yjs
-// (igual que las tareas del tablero): así dos personas pueden mover
-// objetos distintos a la vez sin pisarse.
+// este archivo controla el funcionamiento visual interactivo de la pizarra
+// colaborativa digital. su propósito es permitir que los integrantes del grupo
+// dibujen a mano alzada, agreguen notas adhesivas de colores, tracen figuras y
+// peguen archivos de imagen, audio o video sobre la pantalla. lo hace
+// respondiendo
+// a las acciones del ratón y del teclado del usuario y actualizando el lienzo
+// compartido en tiempo real. elegimos la herramienta gráfica interactiva porque
+// permite mover, rotar y escalar objetos libremente sobre la pantalla sin
+// complicaciones.
+// se creó de este modo para ofrecer un espacio de trabajo grupal dinámico
+// e intuitivo.
+
+
 import * as Y from "https://cdn.jsdelivr.net/npm/yjs@13.6.14/+esm";
 import { conectarDocumento } from "/colaboracion/static/colaboracion.js";
+
 
 const contenedorNotas = document.getElementById("notas");
 const idProyecto = Number(contenedorNotas.dataset.idProyecto);
@@ -15,8 +25,10 @@ const indicadorEstado = document.getElementById("estado-guardado");
 const lienzo = new fabric.Canvas("lienzo-pizarra", { preserveObjectStacking: true });
 
 // El lienzo nunca puede ser más chico que la ventana: si lo fuera, la pizarra
-// se vería "cortada" a la derecha y los post-its de esa franja desaparecerían.
-// Igual mantenemos un mínimo para que siempre haya espacio de sobra donde pegar.
+// se vería "cortada" a la derecha y los notas adhesivas de esa franja
+// desaparecerían.
+// Igual mantenemos un mínimo para que siempre haya espacio de sobra donde
+// pegar.
 const ANCHO_MINIMO = 1600;
 const ALTO_MINIMO = 1000;
 const zonaPizarra = document.getElementById("zona-pizarra");
@@ -30,17 +42,20 @@ function ajustarLienzo() {
 ajustarLienzo();
 window.addEventListener("resize", ajustarLienzo);
 
-// El color elegido en la paleta se usa para post-its nuevos y para el lápiz.
-let colorActual = "#fde047"; // amarillo post-it vibrante
+// El color elegido en la paleta se usa para notas adhesivas nuevos y para
+// el lápiz.
+let colorActual = "#fde047"; // amarillo nota adhesiva vibrante
 
-// ---- Post-it de verdad ----
-// Es un Textbox de Fabric con dos detalles extra que lo hacen parecer papel:
+// ---- nota adhesiva de verdad ----
+// Es un Textbox de herramienta gráfica con dos detalles extra que lo hacen
+// parecer papel:
 // nunca es más bajo que ancho (el papelito es cuadrado aunque tenga poco texto)
 // y viene con una pequeña inclinación aleatoria, como pegado a mano.
 
 const PostIt = fabric.util.createClass(fabric.Textbox, {
   type: "post-it",
-  // Margen interno del texto respecto al papel. Fabric.padding NO sirve:
+  // Margen interno del texto respecto al papel. herramienta gráfica.padding
+  // NO sirve:
   // ese es el área de selección alrededor del objeto.
   textPadding: 16,
 
@@ -64,7 +79,8 @@ const PostIt = fabric.util.createClass(fabric.Textbox, {
     );
   },
 
-  // Baja el texto para dejar margen arriba (el de abajo ya lo da initDimensions).
+  // Baja el texto para dejar margen arriba (el de abajo ya lo da
+  // initDimensions).
   _renderText: function (ctx) {
     ctx.save();
     ctx.translate(0, this.textPadding);
@@ -91,7 +107,8 @@ const PostIt = fabric.util.createClass(fabric.Textbox, {
   },
 });
 
-// Permite que Fabric reconstruya los post-its guardados o los de un compañero.
+// Permite que herramienta gráfica reconstruya los notas adhesivas
+// guardados o los de un compañero.
 PostIt.fromObject = function (objeto, callback) {
   return fabric.Object._fromObject("PostIt", objeto, callback, "text");
 };
@@ -105,7 +122,8 @@ function crearPostIt(texto, opciones) {
     fill: "#1e293b",
     backgroundColor: colorActual,
     textPadding: 16,
-    // Fabric.padding amplía el cache para que el fondo expandido no se recorte.
+    // herramienta gráfica.padding amplía el cache para que el fondo expandido
+    // no se recorte.
     padding: 16,
     angle: Math.random() * 6 - 3, // inclinación de -3° a +3°
     shadow: { color: "rgba(0,0,0,0.2)", blur: 4, offsetX: 4, offsetY: 5 },
@@ -116,7 +134,7 @@ function crearPostIt(texto, opciones) {
 
 const ORIGEN_LOCAL = "local";
 const doc = new Y.Doc();
-const objetosCompartidos = doc.getMap("objetos"); // uuid -> objeto de Fabric en JSON
+const objetosCompartidos = doc.getMap("objetos"); // uuid -> objeto de herramienta gráfica en JSON
 
 let aplicandoRemoto = false; // evita re-publicar lo que llega de un compañero
 
@@ -147,14 +165,15 @@ function buscarEnLienzo(uuid) {
 }
 
 function hidratarObjeto(objeto, datos, uuid) {
-  // Fabric no siempre restaura propiedades propias; las volvemos a poner a mano.
+  // herramienta gráfica no siempre restaura propiedades propias; las
+  // volvemos a poner a mano.
   objeto.uuid = uuid;
   if (datos.vuraTipo) objeto.vuraTipo = datos.vuraTipo;
   if (datos.mediaUrl) objeto.mediaUrl = datos.mediaUrl;
   if (datos.mediaNombre) objeto.mediaNombre = datos.mediaNombre;
   if (datos.mediaDuracion) objeto.mediaDuracion = datos.mediaDuracion;
   if (datos.reacciones) objeto.reacciones = datos.reacciones;
-  // Post-its viejos no traían textPadding: se lo ponemos al hidratar.
+  // notas adhesivas viejos no traían textPadding: se lo ponemos al hidratar.
   if (objeto.type === "post-it") {
     objeto.textPadding = objeto.textPadding || 16;
     objeto.padding = Math.max(objeto.padding || 0, objeto.textPadding);
@@ -193,7 +212,8 @@ conectarDocumento({
   doc: doc,
   alRecibirEstado: () => {
     if (objetosCompartidos.size > 0) return;
-    // Documento compartido vacío: se siembra con la copia del servidor.
+    // Documento compartido vacío: se siembra con la copia del equipo emisor de
+    // la página.
     doc.transact(() => {
       if (contenidoInicial && contenidoInicial.objetos) {
         // Copia de una pizarra ya guardada.
@@ -201,7 +221,8 @@ conectarDocumento({
           objetosCompartidos.set(uuid, datos);
         });
       } else if (contenidoInicial && contenidoInicial.ops) {
-        // Notas viejas del bloc de texto (Quill): se convierten en un post-it grande.
+        // Notas viejas del bloc de texto (editor de texto): se convierten en un
+        // nota adhesiva grande.
         const texto = contenidoInicial.ops
           .map((operacion) => (typeof operacion.insert === "string" ? operacion.insert : ""))
           .join("").trim();
@@ -233,7 +254,8 @@ function cargarDesdeCompartido() {
 }
 
 function ordenarCapas() {
-  // Post-its, textos y tarjetas de media quedan por encima de los trazos del lápiz.
+  // notas adhesivas, textos y tarjetas de media quedan por encima de los
+  // trazos del lápiz.
   lienzo.getObjects().forEach((obj) => {
     if (obj.type === "post-it" || obj.type === "textbox" || obj.type === "i-text"
         || obj.vuraTipo === "polaroid" || obj.vuraTipo === "voz-it" || obj.vuraTipo === "video") {
@@ -307,7 +329,8 @@ botonLapiz.addEventListener("click", () => {
   botonLapiz.classList.toggle("active", lienzo.isDrawingMode);
 });
 
-// Paleta de colores: pinta el post-it seleccionado y queda como color para los nuevos.
+// Paleta de colores: pinta el nota adhesiva seleccionado y queda como
+// color para los nuevos.
 document.querySelectorAll(".muestra-color").forEach((muestra) => {
   muestra.addEventListener("click", () => {
     colorActual = muestra.dataset.color;
@@ -322,8 +345,9 @@ document.querySelectorAll(".muestra-color").forEach((muestra) => {
   });
 });
 
-// Cada post-it guarda qué usuarios eligieron cada reacción.
-// Al publicar el objeto, Yjs actualiza inmediatamente el papel en los demás navegadores.
+// Cada nota adhesiva guarda qué usuarios eligieron cada reacción.
+// Al publicar el objeto, sincronizador en vivo actualiza inmediatamente el
+// papel en los demás navegadores.
 const paletaReaccionesPostIt = document.getElementById("reacciones-postit");
 document.getElementById("boton-reaccion-postit").addEventListener("click", () => {
   const objeto = lienzo.getActiveObject();
@@ -373,7 +397,9 @@ document.addEventListener("keydown", (evento) => {
 });
 
 // ---- Medios de la pizarra: Voz-it, foto Polaroid y video ----
-// El archivo se sube una sola vez al servidor; Yjs solo sincroniza la URL y la posición.
+// El archivo se sube una sola vez al equipo emisor de la página;
+// sincronizador en vivo solo sincroniza la enlace del archivo y la
+// posición.
 
 async function subirMedio(archivo, tipo) {
   const formulario = new FormData();
@@ -584,7 +610,8 @@ document.getElementById("entrada-video").addEventListener("change", async (event
     indicadorEstado.textContent = "Subiendo video...";
     const subida = await subirMedio(archivo, "video");
 
-    // La miniatura se sube como una imagen normal, así los compañeros la ven igual.
+    // La miniatura se sube como una imagen normal, así los compañeros la ven
+    // igual.
     let urlMiniatura = null;
     const fotograma = await capturarFotogramaVideo(archivo);
     if (fotograma) {
@@ -689,7 +716,8 @@ lienzo.on("mouse:dblclick", (evento) => {
   }
 });
 
-// ---- Copia de lectura en el servidor (para vistas y exportación) ----
+// ---- Copia de lectura en el equipo emisor de la página (para vistas y
+// exportación) ----
 
 let temporizadorCopia = null;
 let hayCambiosSinGuardar = false;
@@ -775,7 +803,8 @@ window.socketChat.on("cursor_movido", (datos) => {
   // Transform es mucho más eficiente que top/left porque usa la GPU
   cursor.style.transform = `translate(${datos.x}px, ${datos.y}px)`;
   
-  // Si no se mueve en 3 segundos, lo borramos (probablemente salió de la pestaña)
+  // Si no se mueve en 3 segundos, lo borramos (probablemente salió de la
+  // pestaña)
   clearTimeout(cursor.temporizadorLimpieza);
   cursor.temporizadorLimpieza = setTimeout(() => {
     cursor.remove();

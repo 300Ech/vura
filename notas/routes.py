@@ -1,27 +1,51 @@
+# este archivo administra la pizarra colaborativa digital del proyecto. la
+# pizarra es un lienzo visual donde el equipo realiza lluvias de ideas, traza
+# esquemas, escribe notas adhesivas de colores y pega fotos, audios o videos.
+# su propósito es dar un espacio gráfico e interactivo para organizar el trabajo.
+# lo hace recibiendo los trazos e imágenes del lienzo y guardándolos en disco.
+# elegimos la herramienta gráfica interactiva del navegador porque
+# permite mover y escalar figuras libremente, y usamos carpetas de medios para
+# que las fotos y audios carguen velozmente sin saturar la base de datos.
+# se creó así para solucionar la falta de un espacio creativo en grupo.
+
+
+# importamos herramientas para manejar datos organizados, archivos e identificadores únicos
 import json
 import os
 import uuid as modulo_uuid
 
+# importamos funciones de flask para cargar pantallas web, peticiones de datos y servir archivos
 from flask import Blueprint, render_template, request, jsonify, abort, send_from_directory
+# importamos la verificación de sesión del alumno
 from flask_login import login_required, current_user
+# importamos la limpieza de nombres de archivos subidos
 from werkzeug.utils import secure_filename
 
+# importamos la ruta donde se guardan los datos
 from config import RUTA_DATOS
+# importamos la base de datos y la función de hora local
 from extensiones import db, hora_local
+# importamos los modelos de proyectos y notas
 from proyectos.models import Proyecto
 from notas.models import Nota
 
+# creamos la sección notas
 notas = Blueprint("notas", __name__, template_folder="templates",
                   static_folder="static", static_url_path="/notas/static")
 
-LIMITE_CONTENIDO = 500_000  # JSON de la pizarra (los archivos van aparte, en disco)
 
-# Medios de la pizarra (fotos, Voz-it y videos): se guardan en disco;
-# en Yjs solo viaja la URL corta del archivo.
+# límite de tamaño del contenido escrito en la pizarra
+LIMITE_CONTENIDO = 500_000
+
+# carpeta donde se almacenan físicamente los audios, videos y fotos pegados en la pizarra
 CARPETA_MEDIOS = os.path.join(RUTA_DATOS, "medios_pizarra")
+# extensiones de imágenes permitidas
 EXTENSIONES_IMAGEN = {"png", "jpg", "jpeg", "gif", "webp"}
+# extensiones de notas de voz permitidas
 EXTENSIONES_AUDIO = {"webm", "ogg", "mp3", "m4a", "wav"}
+# extensiones de video permitidas
 EXTENSIONES_VIDEO = {"webm", "mp4"}
+# peso máximo para fotos (10mb), audios de voz (5mb) y videos (25mb) pegados en la pizarra
 TAMANOS_MAXIMOS = {
     "imagen": 10 * 1024 * 1024,
     "audio": 5 * 1024 * 1024,
@@ -29,6 +53,8 @@ TAMANOS_MAXIMOS = {
 }
 
 
+# función auxiliar que comprueba si el proyecto existe y si el alumno conectado es parte del equipo.
+# sirve para proteger la pizarra y evitar que estudiantes de otros grupos entren a ver o modificar bocetos.
 def obtener_proyecto_de_miembro(id_proyecto):
     proyecto = db.get_or_404(Proyecto, id_proyecto)
     if not proyecto.equipo.es_miembro(current_user):
@@ -36,16 +62,20 @@ def obtener_proyecto_de_miembro(id_proyecto):
     return proyecto
 
 
+# función que abre la pantalla principal de la pizarra de dibujo y notas adhesivas.
+# sirve para mostrar a los alumnos su lienzo interactivo con sus figuras, notas y fotos.
+# lo hace buscando la nota guardada del proyecto y cargando la lista de todos los proyectos del alumno para cambiar rápido.
+# se diseñó así para que los estudiantes tengan un espacio visual de planificación dentro de su proyecto.
 @notas.route("/proyectos/<int:id_proyecto>/notas")
 @login_required
 def ver_notas(id_proyecto):
     proyecto = obtener_proyecto_de_miembro(id_proyecto)
     nota = proyecto.nota
     contenido = nota.contenido_json if nota and nota.contenido_json else "null"
-    # Se escapa '<' para que un texto con '</script>' no pueda romper la etiqueta donde va incrustado el JSON.
+    # previene problemas de seguridad al insertar el contenido de la pizarra en el archivo html
     contenido = contenido.replace("<", "\\u003c")
 
-    # Todos los proyectos del usuario, para el selector con el que se cambia de pizarra.
+    # cargamos todos los proyectos a los que pertenece el alumno para el menú desplegable de cambio rápido
     from equipos.models import MiembroEquipo
     ids_equipos = [m.id_equipo for m in MiembroEquipo.query.filter_by(id_usuario=current_user.id)]
     mis_proyectos = (Proyecto.query.filter(Proyecto.id_equipo.in_(ids_equipos))
@@ -55,6 +85,10 @@ def ver_notas(id_proyecto):
                            contenido=contenido, mis_proyectos=mis_proyectos)
 
 
+# función que guarda los cambios de la pizarra (trazos, texto, figuras, notas adhesivas) en la base de datos.
+# sirve para conservar el avance del trabajo gráfico para que no se pierda al cerrar el navegador.
+# lo hace recibiendo los datos del lienzo y enviando además un aviso flotante a los demás compañeros del equipo.
+# se creó de esta manera para garantizar que las ideas dibujadas queden almacenadas y todos sepan cuando alguien edita.
 @notas.route("/proyectos/<int:id_proyecto>/notas/guardar", methods=["POST"])
 @login_required
 def guardar_notas(id_proyecto):
@@ -77,8 +111,7 @@ def guardar_notas(id_proyecto):
     nota.actualizado_por = current_user.id
     db.session.commit()
 
-    # Aviso al equipo, como mucho una vez cada 10 minutos por persona
-    # (las notas se guardan solas cada pocos segundos mientras se escribe).
+    # envía un aviso flotante a los compañeros del grupo (máximo una vez cada 10 minutos para no molestar)
     from chat.routes import notificar_equipo
     notificar_equipo(
         proyecto.equipo.id,
@@ -95,10 +128,13 @@ def guardar_notas(id_proyecto):
     })
 
 
+# función que permite subir imágenes, notas de voz grabadas o clips de video para pegarlos en la pizarra.
+# sirve para enriquecer los esquemas visuales permitiendo agregar elementos multimedia a la lluvia de ideas.
+# lo hace verificando el tipo y peso del archivo (máximo 10mb fotos, 5mb audios, 25mb videos) y guardándolo en disco.
+# se hizo así para no recargar la base de datos almacenando archivos pesados dentro de ella.
 @notas.route("/proyectos/<int:id_proyecto>/pizarra/medios", methods=["POST"])
 @login_required
 def subir_medio_pizarra(id_proyecto):
-    """Sube una foto, un Voz-it o un video para pegarlo en la pizarra."""
     obtener_proyecto_de_miembro(id_proyecto)
     archivo = request.files.get("archivo")
     tipo = (request.form.get("tipo") or "").strip()
@@ -116,6 +152,7 @@ def subir_medio_pizarra(id_proyecto):
         return jsonify({"error": f"Tipo de archivo no permitido para {tipo}."}), 400
 
     contenido = archivo.read()
+    # verifica que el video, audio o foto no supere el peso máximo permitido
     if len(contenido) > TAMANOS_MAXIMOS[tipo]:
         limite_mb = TAMANOS_MAXIMOS[tipo] // (1024 * 1024)
         return jsonify({"error": f"El archivo pesa más de {limite_mb} MB."}), 400
@@ -129,11 +166,16 @@ def subir_medio_pizarra(id_proyecto):
     return jsonify({"url": url, "nombre": nombre_original, "tipo": tipo})
 
 
+# función que entrega la foto, el audio grabado o el video para ser mostrado dentro de la pizarra compartida.
+# sirve para proyectar y reproducir los medios pegados en la pantalla de cualquier integrante del equipo.
+# lo hace buscando el archivo guardado en la carpeta de medios de la computadora y entregándolo al navegador.
+# se construyó así garantizando que solo los miembros autorizados del proyecto puedan ver los archivos.
 @notas.route("/proyectos/<int:id_proyecto>/pizarra/medios/<nombre_archivo>")
 @login_required
 def servir_medio_pizarra(id_proyecto, nombre_archivo):
     obtener_proyecto_de_miembro(id_proyecto)
-    # Solo nombres inventados por nosotros (uuid + extensión), sin rutas.
     if "/" in nombre_archivo or "\\" in nombre_archivo or ".." in nombre_archivo:
         abort(404)
     return send_from_directory(CARPETA_MEDIOS, nombre_archivo)
+
+

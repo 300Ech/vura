@@ -1,4 +1,13 @@
+/* este archivo controla el aspecto visual, los colores, los estilos de botones */
+/* y las sombras de toda la página web vura. su propósito es dar una apariencia */
+/* moderna, limpia y llamativa inspirada en notas adhesivas y papel escolar. lo */
+/* hace definiendo paletas de colores de tarjetas, esquinas redondeadas y botones */
+/* destacados. elegimos este diseño visual colorido porque resulta atractivo y */
+/* amigable para estudiantes de secundaria durante sus trabajos de grupo. */
+
+
 :root {
+
   /* Fondo canvas FigJam */
   --bg-color: #f3f4f6;
   --dot-color: #d1d5db;

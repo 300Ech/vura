@@ -1,4 +1,11 @@
-# Vura — Código
+<!-- este archivo es la guía de arranque y resumen del proyecto vura. su -->
+<!-- propósito es explicar cómo encender la página web y resumir las funciones -->
+<!-- principales (chat, tareas, pizarra y presentaciones) para la defensa del proyecto -->
+<!-- escolar. lo hace detallando las instrucciones de encendido y el estado de cada -->
+<!-- herramienta. se redactó así para que los alumnos tengan un resumen claro de su proyecto. -->
+
+# vura — plataforma educativa colaborativa
+
 
 Plataforma educativa colaborativa. Ver `../ARQUITECTURA.md` y `../GUIA_IMPLEMENTACION.md`.
 

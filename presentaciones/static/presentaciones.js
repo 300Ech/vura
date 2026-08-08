@@ -1,9 +1,20 @@
-// Editor de diapositivas colaborativo: Fabric.js + Yjs.
-// Cada diapositiva vive en un mapa compartido de Yjs; si dos personas editan la misma,
-// gana el último cambio de esa diapositiva (y Yjs deja a todos con la misma versión).
+// este archivo administra el editor interactivo de diapositivas de exposición.
+// su propósito es permitir que los alumnos diseñen las láminas para su
+// defensa oral,
+// agregando títulos, textos explicativos, figuras geométricas, imágenes y
+// apuntes del
+// expositor. lo hace recibiendo las modificaciones en pantalla y
+// guardándolas en la base
+// de datos. elegimos la herramienta gráfica visual porque permite acomodar
+// y transformar
+// elementos con el ratón de forma libre. se creó así para centralizar la
+// preparación de la exposición.
+
+
 import * as Y from "https://cdn.jsdelivr.net/npm/yjs@13.6.14/+esm";
 import { conectarDocumento } from "/colaboracion/static/colaboracion.js";
 import { TEMAS, PLANTILLAS, ICONOS } from "/presentaciones/static/plantillas.js";
+
 
 const contenedorEditor = document.getElementById("editor-presentacion");
 const diapositivasIniciales = JSON.parse(document.getElementById("datos-diapositivas").textContent);
@@ -59,7 +70,8 @@ let temporizadorGuardado = null;
 let hayCambiosSinGuardar = false;
 let colorAcento = "#8b5cf6";
 
-// Propiedades propias que también deben viajar al servidor/Yjs.
+// Propiedades propias que también deben viajar al equipo emisor de la
+// página/sincronizador en vivo.
 const PROPS_EXTRA = [
   "vuraBloqueado", "lockMovementX", "lockMovementY",
   "lockScalingX", "lockScalingY", "lockRotation", "hasControls",
@@ -371,7 +383,8 @@ lienzo.on("object:added", programarGuardado);
 lienzo.on("object:modified", programarGuardado);
 lienzo.on("object:removed", programarGuardado);
 
-// Notas del presentador: se guardan igual que el resto (sin tocar el historial de deshacer).
+// Notas del presentador: se guardan igual que el resto (sin tocar el
+// historial de deshacer).
 if (campoNotas) {
   campoNotas.addEventListener("input", () => {
     if (cargandoDiapositiva) return;
@@ -502,7 +515,8 @@ lienzo.on("object:moving", (evento) => {
   guiasVisibles = [];
   const b = bordesDe(objeto);
 
-  // Puntos de referencia: bordes y centro del lienzo + los de los demás objetos.
+  // Puntos de referencia: bordes y centro del lienzo + los de los demás
+  // objetos.
   const activos = lienzo.getActiveObjects();
   const objetivosX = [0, ANCHO / 2, ANCHO];
   const objetivosY = [0, ALTO / 2, ALTO];
@@ -513,7 +527,8 @@ lienzo.on("object:moving", (evento) => {
     objetivosY.push(o.arr, o.centroY, o.aba);
   });
 
-  // Elegir el mejor "imán" para X (probando borde izq, centro y der del objeto).
+  // Elegir el mejor "imán" para X (probando borde izq, centro y der del
+  // objeto).
   let mejorX = null;
   objetivosX.forEach((meta) => {
     [b.izq, b.centroX, b.der].forEach((valor) => {
@@ -608,7 +623,8 @@ function textoBase(texto, opciones) {
 
 // ---- Temas y plantillas ----
 // Las plantillas viven en plantillas.js como listas de "piezas" (datos).
-// Aquí sólo traducimos cada pieza a un objeto de Fabric usando los colores
+// Aquí sólo traducimos cada pieza a un objeto de herramienta gráfica
+// usando los colores
 // del tema activo, para que cualquier plantilla combine con cualquier tema.
 
 let temaActivo = TEMAS[0];   // tema elegido en el modal (para vistas previas)
@@ -781,7 +797,8 @@ function dibujarTemas() {
 
 const modalPlantillas = new bootstrap.Modal(document.getElementById("modal-plantillas"));
 document.getElementById("boton-plantillas").addEventListener("click", async () => {
-  // Sin esperar las tipografías, Fabric mide el texto con la fuente de repuesto.
+  // Sin esperar las tipografías, herramienta gráfica mide el texto con la
+  // fuente de repuesto.
   await document.fonts.ready;
   dibujarTemas();
   dibujarGaleria();
@@ -918,7 +935,8 @@ document.getElementById("boton-linea").addEventListener("click", () => {
 });
 
 document.getElementById("boton-flecha").addEventListener("click", () => {
-  // Flecha = línea + triángulo agrupados (sigue siendo Fabric puro).
+  // Flecha = línea + triángulo agrupados (sigue siendo herramienta gráfica
+  // puro).
   const linea = new fabric.Line([0, 20, 180, 20], {
     stroke: selectorColor.value, strokeWidth: 6,
   });
@@ -1306,7 +1324,7 @@ function cerrarMenuContextual() {
   menuContextual.classList.remove("abierto");
 }
 
-// El lienzo de Fabric dispara su propio evento de clic derecho.
+// El lienzo de herramienta gráfica dispara su propio evento de clic derecho.
 lienzo.on("mouse:down", (evento) => {
   if (evento.e.button !== 2) return; // sólo botón derecho
   evento.e.preventDefault();
@@ -1442,7 +1460,7 @@ let indicePresentacion = 0;
 
 function ajustarTamanoPresentacion() {
   const escala = Math.min(window.innerWidth / ANCHO, window.innerHeight / ALTO) * 0.96;
-  // El canvas de Fabric vive dentro de .canvas-container.
+  // El canvas de herramienta gráfica vive dentro de .canvas-container.
   const contenedor = canvasPresentacion.closest(".canvas-container") || canvasPresentacion;
   contenedor.style.transform = `scale(${escala})`;
   contenedor.style.transformOrigin = "center center";

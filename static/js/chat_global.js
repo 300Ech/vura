@@ -1,7 +1,16 @@
-// ---- Panel de chat sobre la pizarra ----
-// Tiene las mismas funciones del chat completo, sin abandonar la pizarra.
+// este archivo administra la ventana desplegable de chat flotante sobre la
+// pizarra
+// y las diapositivas. su propósito es permitir que los integrantes del
+// grupo conversen
+// y compartan notas mientras trabajan en el lienzo gráfico sin tener que
+// cambiarse de
+// pantalla. lo hace conectando la ventana lateral con el sistema de
+// mensajería en vivo.
+// se creó así para que los alumnos no pierdan la comunicación mientras editan.
+
 
 if (document.getElementById("panel-chat")) {
+
 
 const panelChat = document.getElementById("panel-chat");
 const idEquipo = Number(panelChat.dataset.idEquipo);
@@ -138,7 +147,8 @@ document.getElementById("boton-cerrar-chat").addEventListener("click", () => {
 
 socketChat.on("nuevo_mensaje", (mensaje) => {
   avisoEscribiendoPanel.textContent = "";
-  // Si el panel está abierto, mostrar aunque el historial del servidor aún no cargó
+  // Si el panel está abierto, mostrar aunque el historial del equipo emisor
+  // de la página aún no cargó
   // (p. ej. se abrió sin red y después volvió la conexión).
   const mostrar = historialCargado || panelChat.classList.contains("abierto");
   if (mostrar && !datosMensajesPanel.has(mensaje.id)) agregarMensajePanel(mensaje);

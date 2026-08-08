@@ -1,28 +1,49 @@
+# este archivo gestiona la sala de chat en tiempo real, el envío de notas de voz/
+# imágenes, la reacción con emojis y las videollamadas. su propósito es permitir
+# que los integrantes del grupo se comuniquen al instante sin salir de la app.
+# lo hace transmitiendo mensajes en vivo, guardando adjuntos en disco
+# y conectando videollamadas de hasta 6 miembros. se construyó así para solucionar
+# los problemas de comunicación en proyectos escolares.
+
+
+# importamos herramientas para procesar datos, manejar carpetas y generar códigos
 import json
 import os
 import time
 import uuid as modulo_uuid
 
-from flask import Blueprint, render_template, abort, request, jsonify, send_from_directory
+# importamos las funciones de flask para pantallas web, respuestas de datos y descargas
+from flask import Blueprint, render_template, request, jsonify, abort, send_from_directory, current_app
+# importamos la verificación de sesión del alumno
 from flask_login import login_required, current_user
+# importamos las utilidades de comunicación en vivo para chat y videollamadas
 from flask_socketio import join_room, leave_room, rooms, emit
+# importamos la limpieza de nombres de archivos subidos
 from werkzeug.utils import secure_filename
 
+# importamos la ruta donde se guardan los archivos
 from config import RUTA_DATOS
+# importamos la base de datos, las conexiones en vivo y la hora local
 from extensiones import db, socketio, hora_local
+# importamos las plantillas de equipos, proyectos y mensajes de chat
 from equipos.models import Equipo, MiembroEquipo
 from proyectos.models import Proyecto
 from chat.models import Mensaje, AdjuntoMensaje, ReaccionMensaje
 
+# agrupamos las pantallas y eventos del chat bajo la sección chat
 chat = Blueprint("chat", __name__, template_folder="templates",
                  static_folder="static", static_url_path="/chat/static")
 
+# carpeta donde se almacenan las fotos y audios enviados por el chat del equipo
 CARPETA_MEDIOS_CHAT = os.path.join(RUTA_DATOS, "medios_chat")
+# emojis autorizados para reaccionar rápidamente a mensajes de compañeros
 EMOJIS_REACCION = {"👍", "❤️", "😂", "🎉", "👀"}
+# formatos permitidos para enviar imágenes y audios de voz por el chat
 EXTENSIONES_CHAT = {
     "imagen": {"png", "jpg", "jpeg", "gif", "webp"},
     "audio": {"webm", "ogg", "mp3", "m4a", "wav"},
 }
+# peso máximo permitido para fotos (10mb) y notas de voz (5mb) en el chat
 TAMANOS_CHAT = {
     "imagen": 10 * 1024 * 1024,
     "audio": 5 * 1024 * 1024,
@@ -30,6 +51,7 @@ TAMANOS_CHAT = {
 
 
 def obtener_equipo_de_miembro(id_equipo):
+    """comprueba que el equipo exista y que el alumno conectado pertenezca al mismo."""
     equipo = db.session.get(Equipo, id_equipo)
     if equipo is None:
         abort(404)
@@ -39,6 +61,7 @@ def obtener_equipo_de_miembro(id_equipo):
 
 
 def resumen_reacciones(mensaje):
+    """cuenta cuántas reacciones de cada emoji tiene un mensaje y marca si el alumno actual reaccionó."""
     resumen = {}
     mias = []
     for reaccion in mensaje.reacciones:
@@ -49,6 +72,7 @@ def resumen_reacciones(mensaje):
 
 
 def serializar_mensaje(mensaje):
+    """prepara la información del mensaje (texto, hora, foto/audio y reacciones) para transmitirlo al instante."""
     adjunto = None
     if mensaje.adjunto:
         adjunto = {
@@ -73,12 +97,14 @@ def serializar_mensaje(mensaje):
 
 
 def emitir_mensaje(mensaje):
+    """transmite el mensaje en vivo a todos los compañeros del equipo conectados en la sala del chat."""
     equipo = db.session.get(Equipo, mensaje.id_equipo)
     datos = serializar_mensaje(mensaje)
     datos["nombre_equipo"] = equipo.nombre
     socketio.emit("nuevo_mensaje", datos, room=f"equipo_{mensaje.id_equipo}")
 
 
+# pantalla principal del chat del equipo
 @chat.route("/equipos/<int:id_equipo>/chat")
 @login_required
 def sala(id_equipo):
@@ -91,6 +117,7 @@ def sala(id_equipo):
         if proyecto_bd and proyecto_bd.id_equipo == equipo.id:
             proyecto = proyecto_bd
             
+    # carga los últimos 200 mensajes enviados en el equipo para mostrarlos en el historial
     mensajes = (Mensaje.query.filter_by(id_equipo=equipo.id)
                 .order_by(Mensaje.enviado_en)
                 .limit(200).all())
@@ -101,10 +128,10 @@ def sala(id_equipo):
     return render_template("chat/sala.html", equipo=equipo, datos_mensajes=datos_mensajes, proyecto=proyecto)
 
 
+# obtiene los mensajes más recientes en formato ligero para el panel flotante de la pizarra
 @chat.route("/equipos/<int:id_equipo>/chat/mensajes")
 @login_required
 def mensajes_recientes(id_equipo):
-    """Historial en JSON, para el panel de chat que se abre sobre la pizarra."""
     obtener_equipo_de_miembro(id_equipo)
     mensajes = (Mensaje.query.filter_by(id_equipo=id_equipo)
                 .order_by(Mensaje.enviado_en.desc())
@@ -112,6 +139,7 @@ def mensajes_recientes(id_equipo):
     return jsonify({"mensajes": [serializar_mensaje(m) for m in reversed(mensajes)]})
 
 
+# opción para subir fotos o notas de voz grabadas al chat
 @chat.route("/equipos/<int:id_equipo>/chat/adjuntos", methods=["POST"])
 @login_required
 def subir_adjunto_chat(id_equipo):
@@ -127,6 +155,7 @@ def subir_adjunto_chat(id_equipo):
         return jsonify({"error": f"Tipo de archivo no permitido para {tipo}."}), 400
 
     contenido = archivo.read()
+    # comprueba que el audio o foto no supere el peso máximo permitido
     if len(contenido) > TAMANOS_CHAT[tipo]:
         limite_mb = TAMANOS_CHAT[tipo] // (1024 * 1024)
         return jsonify({"error": f"El archivo pesa más de {limite_mb} MB."}), 400
@@ -152,6 +181,7 @@ def subir_adjunto_chat(id_equipo):
     return jsonify(serializar_mensaje(mensaje))
 
 
+# entrega la foto o nota de voz al navegador para que los compañeros puedan verla o escucharla
 @chat.route("/equipos/<int:id_equipo>/chat/medios/<nombre_archivo>")
 @login_required
 def servir_medio_chat(id_equipo, nombre_archivo):
@@ -161,6 +191,7 @@ def servir_medio_chat(id_equipo, nombre_archivo):
     return send_from_directory(CARPETA_MEDIOS_CHAT, nombre_archivo)
 
 
+# pantalla de la videollamada de voz y video en vivo
 @chat.route("/equipos/<int:id_equipo>/llamada")
 @login_required
 def llamada(id_equipo):
@@ -173,11 +204,14 @@ def llamada(id_equipo):
         if proyecto_bd and proyecto_bd.id_equipo == equipo.id:
             proyecto = proyecto_bd
             
-    return render_template("chat/llamada.html", equipo=equipo, proyecto=proyecto)
+    return render_template(
+        "chat/llamada.html", equipo=equipo, proyecto=proyecto,
+        compartir_pantalla_habilitado=current_app.config["COMPARTIR_PANTALLA_HABILITADO"],
+        desenfoque_fondo_habilitado=current_app.config["DESENFOQUE_FONDO_HABILITADO"],
+    )
 
 
-# ---- Eventos de Socket.IO ----
-
+# verifica que el usuario conectado sea un miembro oficial del equipo
 def es_miembro_del_equipo(id_equipo):
     equipo = db.session.get(Equipo, id_equipo)
     return (equipo is not None
@@ -185,6 +219,7 @@ def es_miembro_del_equipo(id_equipo):
             and equipo.es_miembro(current_user))
 
 
+# conecta la pestaña del alumno a la sala del chat de su equipo
 @socketio.on("unirse_sala")
 def unirse_sala(datos):
     id_equipo = datos.get("id_equipo")
@@ -193,16 +228,11 @@ def unirse_sala(datos):
     join_room(f"equipo_{id_equipo}")
 
 
-# Último aviso enviado por cada clave, para no repetir avisos seguidos (ej. alguien escribiendo notas).
 _ultimo_aviso = {}
 
 
 def notificar_equipo(id_equipo, titulo, texto, enlace, clave_repeticion=None, minutos_espera=0):
-    """Envía una notificación a todos los miembros del equipo conectados.
-
-    Si se da una clave de repetición, el mismo aviso no se repite hasta
-    que pasen los minutos de espera (evita el spam de los guardados automáticos).
-    """
+    """envía una alerta flotante en vivo a los compañeros del equipo cuando hay cambios en las tareas o proyectos."""
     if clave_repeticion:
         ahora = time.time()
         if ahora - _ultimo_aviso.get(clave_repeticion, 0) < minutos_espera * 60:
@@ -217,12 +247,9 @@ def notificar_equipo(id_equipo, titulo, texto, enlace, clave_repeticion=None, mi
     }, room=f"equipo_{id_equipo}")
 
 
+# conecta al alumno a las notificaciones de todos sus equipos para recibir avisos aunque esté navegando en otra parte
 @socketio.on("unirse_notificaciones")
 def unirse_notificaciones():
-    """Une al usuario a las salas de todos sus equipos, desde cualquier página.
-
-    Así le llegan los mensajes nuevos y puede ver avisos aunque no esté en el chat.
-    """
     if not current_user.is_authenticated:
         return
     membresias = MiembroEquipo.query.filter_by(id_usuario=current_user.id).all()
@@ -230,6 +257,7 @@ def unirse_notificaciones():
         join_room(f"equipo_{membresia.id_equipo}")
 
 
+# transmite el aviso de "alguien está escribiendo..." a los demás miembros del equipo
 @socketio.on("escribiendo")
 def escribiendo(datos):
     id_equipo = datos.get("id_equipo")
@@ -239,6 +267,7 @@ def escribiendo(datos):
          room=f"equipo_{id_equipo}", include_self=False)
 
 
+# transmite la posición del mouse del alumno a los compañeros en la pizarra colaborativa
 @socketio.on("mover_cursor")
 def mover_cursor(datos):
     id_equipo = datos.get("id_equipo")
@@ -252,17 +281,13 @@ def mover_cursor(datos):
     }, room=f"equipo_{id_equipo}", include_self=False)
 
 
-# ---- Videollamada grupal en malla (WebRTC) ----
-# Socket.IO solo "presenta" a los navegadores (señalización); el audio y el video
-# viajan directo entre ellos. Cada participante se conecta con todos los demás,
-# por eso hay un límite: con demasiadas conexiones directas el video se congela.
-
+# limitamos las videollamadas a máximo 6 personas a la vez para evitar que el video se congele o consuma todo el internet del colegio
 MAXIMO_PARTICIPANTES = 6
 
-# Quién está en cada llamada: sala -> {id de conexión: nombre}
 participantes_llamada = {}
 
 
+# maneja la entrada de un alumno a la videollamada grupal
 @socketio.on("llamada_unirse")
 def llamada_unirse(datos):
     id_equipo = datos.get("id_equipo")
@@ -271,17 +296,17 @@ def llamada_unirse(datos):
     sala = f"llamada_{id_equipo}"
     presentes = participantes_llamada.setdefault(sala, {})
 
+    # si ya hay 6 alumnos en la llamada, avisa que la sala está llena
     if len(presentes) >= MAXIMO_PARTICIPANTES:
         emit("llamada_llena", {"maximo": MAXIMO_PARTICIPANTES})
         return
 
-    # Quien llega recibe la lista de los presentes, para conectarse con cada uno.
     emit("llamada_participantes", {
         "participantes": [{"id": id_conexion, "nombre": nombre}
                           for id_conexion, nombre in presentes.items()],
     })
 
-    # Si es el primero en entrar, se avisa al resto del equipo que empezó una llamada.
+    # si es la primera persona en entrar, avisa a todo el grupo que inició una videollamada
     if len(presentes) == 0:
         equipo = db.session.get(Equipo, id_equipo)
         emit("llamada_iniciada", {
@@ -294,6 +319,7 @@ def llamada_unirse(datos):
     join_room(sala)
 
 
+# transmite las señales de cámara y micrófono entre los alumnos en la videollamada
 @socketio.on("llamada_senal")
 def llamada_senal(datos):
     id_equipo = datos.get("id_equipo")
@@ -311,6 +337,7 @@ def llamada_senal(datos):
 
 
 def salir_de_llamada(sala):
+    """retira al alumno de la sala de videollamada y avisa a sus compañeros."""
     presentes = participantes_llamada.get(sala, {})
     if request.sid in presentes:
         nombre = presentes.pop(request.sid)
@@ -318,6 +345,7 @@ def salir_de_llamada(sala):
         emit("llamada_se_fue", {"id": request.sid, "nombre": nombre}, room=sala)
 
 
+# acción al colgar el botón rojo de la videollamada
 @socketio.on("llamada_colgar")
 def llamada_colgar(datos):
     id_equipo = datos.get("id_equipo")
@@ -326,14 +354,15 @@ def llamada_colgar(datos):
     salir_de_llamada(f"llamada_{id_equipo}")
 
 
+# desconecta automáticamente al alumno si cierra la pestaña del navegador durante la llamada
 @socketio.on("disconnect")
 def al_desconectar():
-    # Si cerró la pestaña en plena llamada, se le saca y se avisa a los demás.
     for sala in list(rooms()):
         if sala.startswith("llamada_"):
             salir_de_llamada(sala)
 
 
+# recibe y transmite un nuevo mensaje de texto enviado por el alumno en el chat
 @socketio.on("enviar_mensaje")
 def enviar_mensaje(datos):
     id_equipo = datos.get("id_equipo")
@@ -345,10 +374,10 @@ def enviar_mensaje(datos):
     db.session.add(mensaje)
     db.session.commit()
     emitir_mensaje(mensaje)
-    # El cliente usa este "ok" para borrar el mensaje de la cola offline.
     return {"ok": True, "id": mensaje.id}
 
 
+# guarda o retira una reacción de emoji (👍, ❤️, 😂, 🎉, 👀) colocada en un mensaje
 @socketio.on("reaccionar_mensaje")
 def reaccionar_mensaje(datos):
     id_equipo = datos.get("id_equipo")
@@ -385,3 +414,4 @@ def reaccionar_mensaje(datos):
         "activo": activo,
         "totales": resumen["totales"],
     }, room=f"equipo_{id_equipo}")
+

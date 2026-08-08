@@ -1,4 +1,13 @@
-// Registro del Service Worker, PWA e indicador de conexión.
+// este archivo controla las funciones generales de la plataforma web en el
+// navegador. su propósito es detectar si la computadora tiene o no conexión a
+// internet, mostrar un aviso de alerta en pantalla si se cae la señal y
+// permitir
+// instalar la página como una aplicación en el escritorio o teléfono. lo hace
+// revisando el estado de red de la computadora. se construyó así para mantener
+// orientado al estudiante sobre el estado de su conexión.
+
+
+// registra el asistente de servicio para funcionamiento cuando se cae la red
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js");
 }
@@ -7,6 +16,10 @@ const indicadorConexion = document.getElementById("estado-conexion");
 const bannerSinConexion = document.getElementById("banner-sin-conexion");
 const botonInstalar = document.getElementById("boton-instalar-pwa");
 
+
+// función que revisa si el alumno tiene internet y actualiza el indicador
+// flotante de pantalla.
+// sirve para advertir visualmente al estudiante si se fue la señal de red.
 function actualizarIndicadorConexion() {
   const enLinea = navigator.onLine;
   document.body.classList.toggle("sin-conexion", !enLinea);
@@ -23,6 +36,7 @@ function actualizarIndicadorConexion() {
     bannerSinConexion.hidden = enLinea;
   }
 }
+
 
 window.addEventListener("online", actualizarIndicadorConexion);
 window.addEventListener("offline", actualizarIndicadorConexion);
@@ -70,7 +84,8 @@ if (botonInstalar) {
     }
   });
 
-  // En iOS mostramos el botón siempre (con instrucciones), porque no hay beforeinstallprompt.
+  // En iOS mostramos el botón siempre (con instrucciones), porque no hay
+  // beforeinstallprompt.
   if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !yaEstaInstalada()) {
     botonInstalar.hidden = false;
   }

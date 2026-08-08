@@ -1,3 +1,7 @@
+<!-- este archivo construye la pantalla de la videollamada en grupo. su propósito -->
+<!-- es permitir que los integrantes del equipo se vean y escuchen a través de -->
+<!-- su cámara y micrófono mientras coordinan su trabajo escolar a distancia. -->
+
 {% extends "base.html" %}
 {% block titulo %}Videollamada de {{ equipo.nombre }}{% endblock %}
 
@@ -98,10 +102,19 @@
   <div id="barra-controles">
     <button id="boton-microfono" type="button" title="Silenciar micrófono"><i class="bi bi-mic-fill"></i></button>
     <button id="boton-camara" type="button" title="Apagar cámara"><i class="bi bi-camera-video-fill"></i></button>
+    {% if compartir_pantalla_habilitado %}
+    <button id="boton-pantalla" type="button" title="Compartir pantalla"><i class="bi bi-display"></i></button>
+    {% endif %}
+    {% if desenfoque_fondo_habilitado %}
+    <button id="boton-desenfoque" type="button" title="Difuminar fondo"><i class="bi bi-droplet-half"></i></button>
+    {% endif %}
     <button id="boton-colgar" type="button" title="Colgar"><i class="bi bi-telephone-x-fill"></i></button>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/socket.io@4.7.5/client-dist/socket.io.min.js"></script>
+{% if desenfoque_fondo_habilitado %}
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
+{% endif %}
 <script src="{{ url_for('chat.static', filename='llamada.js') }}"></script>
 {% endblock %}

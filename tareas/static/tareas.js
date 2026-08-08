@@ -1,8 +1,18 @@
-// Tablero de tareas colaborativo y offline: el documento Yjs es la única fuente de verdad.
-// La página llega renderizada por Flask; este archivo la mejora: redibuja las columnas
-// desde el Y.Map, y crear/editar/mover/asignar escriben en el mapa (con o sin conexión).
+// este archivo controla el tablero interactivo de tareas organizadas por
+// columnas.
+// su propósito es permitir que los estudiantes creen tarjetas de
+// pendientes, las
+// muevan de columna (pendiente, en progreso, terminada), asignen responsables y
+// fijen fechas de entrega. lo hace respondiendo a los movimientos del ratón y
+// actualizando la posición de la tarjeta en pantalla y en la base de
+// datos. se creó
+// de esta forma para ofrecer una visión clara de las responsabilidades del
+// equipo.
+
+
 import * as Y from "https://cdn.jsdelivr.net/npm/yjs@13.6.14/+esm";
 import { conectarDocumento } from "/colaboracion/static/colaboracion.js";
+
 
 const datosIniciales = JSON.parse(document.getElementById("datos-tablero").textContent);
 const idProyecto = datosIniciales.id_proyecto;
@@ -22,7 +32,8 @@ const mapaTareas = doc.getMap("tareas");
 
 await conectarDocumento({ tipo: "tablero_tareas", idProyecto: idProyecto, doc: doc });
 
-// Primera vez (mapa vacío): se siembra con la copia que renderizó el servidor.
+// Primera vez (mapa vacío): se siembra con la copia que mostró el equipo
+// emisor de la página.
 if (mapaTareas.size === 0 && datosIniciales.tareas.length > 0) {
   doc.transact(() => {
     datosIniciales.tareas.forEach((tarea) => mapaTareas.set(tarea.uuid, tarea));
@@ -308,7 +319,8 @@ formularioTarea.addEventListener("submit", (evento) => {
 });
 
 // ---- Comentarios y archivos de la tarea abierta en el modal ----
-// No pasan por Yjs: son "agregar y leer", así que basta con fetch al servidor.
+// No pasan por sincronizador en vivo: son "agregar y leer", así que basta
+// con fetch al equipo emisor de la página.
 
 const seccionDetalles = document.getElementById("seccion-detalles");
 const listaComentarios = document.getElementById("lista-comentarios");
@@ -401,7 +413,8 @@ entradaArchivo.addEventListener("change", async () => {
   }
 });
 
-// ---- Copia de lectura en el servidor (para vistas y exportación) ----
+// ---- Copia de lectura en el equipo emisor de la página (para vistas y
+// exportación) ----
 
 let temporizadorCopia = null;
 
